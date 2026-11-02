@@ -1,4 +1,4 @@
-/*! Motion Studio engine v1.2.0 */
+/*! Motion Studio engine v1.3.0 */
 :root{--bg:#15171c;--panel:#1d2027;--line:#2c3039;--fg:#e9e6df;--mute:#9aa0aa;--acc:#e0475b;--ok:#3fbf7f;--warn:#e8a33d}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:14px/1.5 "Hiragino Sans","Noto Sans JP","Yu Gothic UI","Meiryo",system-ui,sans-serif}
