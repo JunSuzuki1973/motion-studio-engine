@@ -1,10 +1,10 @@
-/*! Motion Studio engine v1.3.0
+/*! Motion Studio engine v1.4.0
  * ブラウザだけで動くモーショングラフィックス動画の編集アプリ（Gemini の Canvas 用）。
  * 使い方：読み込み用の HTML に <script type="application/json" id="storyboard"> と const apiKey = ""; を置き、このファイルを読み込む。
  * 元ファイル：gemini-video-skill/src/studio.html（scripts/build_engine.py で生成。直接編集しない）
  */
-window.MS_ENGINE = "1.3.0";
-document.body.insertAdjacentHTML("afterbegin", "<div id=\"app\">\n  <div id=\"top\">\n    <span class=\"title\" id=\"projTitle\">Motion Studio</span>\n    <button id=\"btnPlay\" class=\"primary\">▶ 再生</button>\n    <button id=\"btnGen\" class=\"hideBig\" title=\"まだ無い声と画像だけを作ります\">声と画像を作る</button>\n    <button id=\"btnBgm\" class=\"hideBig\">BGM</button>\n    <label class=\"hideBig note\" style=\"display:flex;align-items:center;gap:4px\">音量<input id=\"bgmVol\" type=\"range\" min=\"0\" max=\"0.6\" step=\"0.01\" style=\"width:80px\"></label>\n    <select id=\"voiceSel\" class=\"hideBig\" style=\"width:auto\" title=\"ナレーションの声\"></select>\n    <span class=\"sp\"></span>\n    <button id=\"btnUndo\" class=\"hideBig\">1つ前に戻す</button>\n    <button id=\"btnTexts\" class=\"hideBig\">画面の文字を全て表示</button>\n    <button id=\"btnCopy\" class=\"hideBig\" title=\"手直しを含めた台本データをコピーして、Gemini のチャットに貼り付けます\">編集内容をコピー</button>\n    <button id=\"btnSave\" class=\"hideBig\">保存</button>\n    <button id=\"btnPaste\" class=\"hideBig\" title=\"Gemini がチャットに出した台本データ（JSON）を貼り付けます\">台本を貼る</button>\n    <button id=\"btnLoad\" class=\"hideBig\">読込</button>\n    <button id=\"btnBig\">大きく表示</button>\n    <select id=\"quality\" class=\"hideBig\" style=\"width:auto\" title=\"書き出す MP4 の画質（ファイルの大きさ）\"><option value=\"8\">高画質</option><option value=\"5\" selected>標準</option><option value=\"2.5\">軽量</option></select>\n    <button id=\"btnExport\" class=\"primary hideBig\">書き出す MP4</button>\n  </div>\n  <div id=\"main\">\n    <div id=\"stageWrap\"><canvas id=\"stage\"></canvas><textarea id=\"editBox\"></textarea></div>\n    <div id=\"side\"></div>\n  </div>\n  <div id=\"bottom\">\n    <div id=\"scenes\"></div>\n    <input id=\"seek\" type=\"range\" min=\"0\" max=\"1000\" value=\"0\">\n    <span id=\"time\">0:00 / 0:00</span>\n    <span id=\"status\"></span>\n  </div>\n</div>\n\n<div class=\"modal\" id=\"mTexts\"><div class=\"box\"><h2>画面の文字（まとめて修正）</h2><table class=\"alltexts\" id=\"allTexts\" style=\"width:100%\"></table><div class=\"row\"><button id=\"allTextsApply\" class=\"primary\">反映する</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mBgm\"><div class=\"box\"><h2>BGM</h2><p class=\"note\" id=\"bgmNow\"></p>\n<h3 style=\"font-size:14px;margin:14px 0 4px\">AI で作る（Gemini の音楽生成・利用枠を使います）</h3><textarea id=\"bgmPrompt\" rows=\"3\" placeholder=\"英語の BGM の指示\"></textarea><div class=\"row\"><button id=\"bgmAi\" class=\"primary\">AI で作る</button></div>\n<h3 style=\"font-size:14px;margin:14px 0 4px\">自動で作る（すぐできる・利用枠を使わない）</h3><div class=\"row\"><select id=\"bgmStyle\" style=\"width:auto\"><option value=\"cyber\">サイバー</option><option value=\"cinematic\">シネマ</option><option value=\"stylish\">スタイリッシュ</option><option value=\"pop\">ポップ</option><option value=\"calm\">やさしい（解説向け）</option></select><button id=\"bgmSynth\">自動で作る</button></div>\n<h3 style=\"font-size:14px;margin:14px 0 4px\">ファイルから（「音楽を作成」で保存した MP3 など）</h3><div class=\"row\"><button id=\"bgmFile\">ファイルを選ぶ</button><button id=\"bgmNone\">BGM なし</button></div>\n<p class=\"note\" id=\"bgmMsg\"></p><div class=\"row\"><button id=\"bgmPlay\">▶ 試聴（10 秒）</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mGen\"><div class=\"box\"><h2 id=\"genTitle\">声と画像を作っています</h2><div class=\"bar\"><i id=\"genBar\"></i></div><p class=\"note\" id=\"genMsg\"></p><div class=\"row\"><button data-close id=\"genClose\" style=\"display:none\">閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mExport\"><div class=\"box\"><h2 id=\"expTitle\">書き出し中</h2><div class=\"bar\"><i id=\"expBar\"></i></div><p class=\"note\" id=\"expMsg\"></p><div class=\"row\"><button id=\"expCancel\">中止</button></div></div></div>\n<div class=\"modal\" id=\"mPaste\"><div class=\"box\"><h2>台本データを貼り付け</h2><p class=\"note\">Gemini がチャットに出した台本データ（<code>{\"meta\": … \"scenes\": …}</code> の JSON）を、そのまま下に貼り付けて「読み込む」を押してください。前後の文章や ```json の行が混ざっていても大丈夫です。</p><textarea id=\"pasteText\" style=\"height:280px;font-family:monospace;font-size:12px\"></textarea><p class=\"note\" id=\"pasteMsg\"></p><div class=\"row\"><button id=\"pasteDo\" class=\"primary\">読み込む</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mCopy\"><div class=\"box\"><h2>編集内容をコピー</h2><p class=\"note\">下の文章を全部コピーして、Gemini のチャット欄に貼り付け、続けて「直してほしいこと」を書いて送ってください。手直しした文字はそのまま引き継がれます。</p><textarea id=\"copyText\" style=\"height:300px;font-family:monospace;font-size:12px\"></textarea><div class=\"row\"><button id=\"copyDo\" class=\"primary\">コピー</button><button data-close>閉じる</button></div></div></div>\n<input type=\"file\" id=\"fileBgm\" accept=\"audio/*\" hidden>\n<input type=\"file\" id=\"fileImg\" accept=\"image/*\" hidden>\n<input type=\"file\" id=\"fileProj\" accept=\".json,application/json\" hidden>\n<input type=\"file\" id=\"fileVoice\" accept=\"audio/*\" hidden>");
+window.MS_ENGINE = "1.4.0";
+document.body.insertAdjacentHTML("afterbegin", "<div id=\"app\">\n  <div id=\"top\">\n    <span class=\"title\" id=\"projTitle\">Motion Studio</span>\n    <button id=\"btnPlay\" class=\"primary\">▶ 再生</button>\n    <button id=\"btnGen\" class=\"hideBig\" title=\"まだ無い声と画像だけを作ります\">声と画像を作る</button>\n    <button id=\"btnBgm\" class=\"hideBig\">BGM</button>\n    <label class=\"hideBig note\" style=\"display:flex;align-items:center;gap:4px\">音量<input id=\"bgmVol\" type=\"range\" min=\"0\" max=\"0.6\" step=\"0.01\" style=\"width:80px\"></label>\n    <select id=\"voiceSel\" class=\"hideBig\" style=\"width:auto\" title=\"ナレーションの声\"></select>\n    <span class=\"sp\"></span>\n    <button id=\"btnUndo\" class=\"hideBig\">1つ前に戻す</button>\n    <button id=\"btnTexts\" class=\"hideBig\">画面の文字を全て表示</button>\n    <button id=\"btnCopy\" class=\"hideBig\" title=\"手直しを含めた台本データをコピーして、Gemini のチャットに貼り付けます\">編集内容をコピー</button>\n    <button id=\"btnSave\" class=\"hideBig\">保存</button>\n    <button id=\"btnPaste\" class=\"hideBig\" title=\"Gemini がチャットに出した台本データ（JSON）を貼り付けます\">台本を貼る</button>\n    <button id=\"btnLoad\" class=\"hideBig\">読込</button>\n    <button id=\"btnBig\">大きく表示</button>\n    <select id=\"quality\" class=\"hideBig\" style=\"width:auto\" title=\"書き出す MP4 の画質（ファイルの大きさ）\"><option value=\"8\">高画質</option><option value=\"5\" selected>標準</option><option value=\"2.5\">軽量</option></select>\n    <button id=\"btnExport\" class=\"primary hideBig\">書き出す MP4</button>\n  </div>\n  <div id=\"main\">\n    <div id=\"stageWrap\"><canvas id=\"stage\"></canvas><textarea id=\"editBox\"></textarea></div>\n    <div id=\"side\"></div>\n  </div>\n  <div id=\"bottom\">\n    <div id=\"scenes\"></div>\n    <input id=\"seek\" type=\"range\" min=\"0\" max=\"1000\" value=\"0\">\n    <span id=\"time\">0:00 / 0:00</span>\n    <span id=\"status\"></span>\n  </div>\n</div>\n\n<div class=\"modal\" id=\"mTexts\"><div class=\"box\"><h2>画面の文字（まとめて修正）</h2><table class=\"alltexts\" id=\"allTexts\" style=\"width:100%\"></table><div class=\"row\"><button id=\"allTextsApply\" class=\"primary\">反映する</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mBgm\"><div class=\"box\"><h2>BGM</h2><p class=\"note\" id=\"bgmNow\"></p>\n<h3 style=\"font-size:14px;margin:14px 0 4px\">自動で作る（数秒・利用枠を使わない）</h3><div class=\"row\"><select id=\"bgmStyle\" style=\"width:auto\"><option value=\"cyber\">サイバー</option><option value=\"cinematic\">シネマ</option><option value=\"stylish\">スタイリッシュ</option><option value=\"pop\">ポップ</option><option value=\"calm\">やさしい（解説向け）</option></select><button id=\"bgmSynth\" class=\"primary\">自動で作る</button></div>\n<h3 style=\"font-size:14px;margin:14px 0 4px\">Gemini の「音楽を作成」で作る（質が高い）</h3><p class=\"note\">① 下のプロンプトをコピー → ② 新しいタブで Gemini の「音楽を作成」に貼り、ボーカルを「インストルメンタル」にして送信 → ③ ダウンロードで「音声のみ（MP3）」を保存 → ④「ファイルを選ぶ」で入れる</p><textarea id=\"bgmPrompt\" rows=\"3\"></textarea><div class=\"row\"><button id=\"bgmCopy\">プロンプトをコピー</button><button id=\"bgmFile\">ファイルを選ぶ</button><button id=\"bgmNone\">BGM なし</button></div>\n<p class=\"note\" id=\"bgmMsg\"></p><div class=\"row\"><button id=\"bgmPlay\">▶ 試聴（10 秒）</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mGen\"><div class=\"box\"><h2 id=\"genTitle\">声と画像を作っています</h2><div class=\"bar\"><i id=\"genBar\"></i></div><p class=\"note\" id=\"genMsg\"></p><div class=\"row\"><button data-close id=\"genClose\" style=\"display:none\">閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mExport\"><div class=\"box\"><h2 id=\"expTitle\">書き出し中</h2><div class=\"bar\"><i id=\"expBar\"></i></div><p class=\"note\" id=\"expMsg\"></p><div class=\"row\"><button id=\"expCancel\">中止</button></div></div></div>\n<div class=\"modal\" id=\"mPaste\"><div class=\"box\"><h2>台本データを貼り付け</h2><p class=\"note\">Gemini がチャットに出した台本データ（<code>{\"meta\": … \"scenes\": …}</code> の JSON）を、そのまま下に貼り付けて「読み込む」を押してください。前後の文章や ```json の行が混ざっていても大丈夫です。</p><textarea id=\"pasteText\" style=\"height:280px;font-family:monospace;font-size:12px\"></textarea><p class=\"note\" id=\"pasteMsg\"></p><div class=\"row\"><button id=\"pasteDo\" class=\"primary\">読み込む</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mCopy\"><div class=\"box\"><h2>編集内容をコピー</h2><p class=\"note\">下の文章を全部コピーして、Gemini のチャット欄に貼り付け、続けて「直してほしいこと」を書いて送ってください。手直しした文字はそのまま引き継がれます。</p><textarea id=\"copyText\" style=\"height:300px;font-family:monospace;font-size:12px\"></textarea><div class=\"row\"><button id=\"copyDo\" class=\"primary\">コピー</button><button data-close>閉じる</button></div></div></div>\n<input type=\"file\" id=\"fileBgm\" accept=\"audio/*\" hidden>\n<input type=\"file\" id=\"fileImg\" accept=\"image/*\" hidden>\n<input type=\"file\" id=\"fileProj\" accept=\".json,application/json\" hidden>\n<input type=\"file\" id=\"fileVoice\" accept=\"audio/*\" hidden>");
 /* ============================================================
    CONFIG（Canvas の API 設定）
    - apiKey は空のままにする。Gemini の Canvas が実行時に自動で入れる。
@@ -17,7 +17,8 @@ const MODELS = {
   tts:   ["gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts"],
   image: ["gemini-2.5-flash-image-preview", "gemini-3.1-flash-image-preview", "imagen-4.0-generate-001", "imagen-3.0-generate-002"],
   // 音楽（Lyria）。短い動画は 30 秒の clip、長い動画は曲の長いモデルを先に試す
-  music: ["lyria-3-clip-preview", "lyria-3-pro-preview", "lyria-3.5"]
+  // 音楽（Lyria）は Canvas からは呼べない（2026-11-03 実機で HTTP 403「unregistered callers」）。BGM は自動合成か「音楽を作成」のファイルで
+  music: []
 };
 // loader で window.MS_MODELS = { tts: [...], image: [...] } を指定すると、その名前を先に試す
 if (window.MS_MODELS) ["tts", "image"].forEach(k => { const add = window.MS_MODELS[k]; if (add && add.length) MODELS[k] = [...add, ...MODELS[k].filter(m => !add.includes(m))]; });
@@ -720,24 +721,6 @@ function defaultMusicPrompt() {
   const st = { cyber: "dark synthwave, tense pulsing bass, glitchy textures", cinematic: "cinematic orchestral hybrid, elegant and tense", pop: "upbeat pop, bright, playful", whiteboard: "light lo-fi, calm, unobtrusive", stylish: "sleek modern electronic, confident" }[TH().preset] || "sleek modern electronic";
   return `${st} background music for a ${Math.round(TL.total)}-second video with narration. Minimal, no lead melody in the mid range, steady and loopable. Instrumental, no vocals.`;
 }
-async function genMusic(prompt) {
-  const order = TL.total > 35 ? ["lyria-3-pro-preview", "lyria-3.5", ...MODELS.music] : MODELS.music;
-  const errs = [];
-  for (const model of [...new Set(order)]) {
-    for (const mods of [["AUDIO", "TEXT"], ["AUDIO"]]) {
-      try {
-        const r = await apiCall(model, "generateContent", { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseModalities: mods } });
-        const p = r?.candidates?.[0]?.content?.parts?.find(x => x.inlineData && /audio/.test(x.inlineData.mimeType || "audio"));
-        if (!p) throw new Error("音楽が返ってきませんでした");
-        await restoreAsset("bgm", { kind: "bgm", mime: p.inlineData.mimeType || "audio/mpeg", bytes: b64ToBytes(p.inlineData.data) });
-        delete SB.meta.bgm.synth; SB.meta.bgm.prompt = prompt; usage.music++;
-        DB.put("bgm_last", { kind: "bgm", mime: ASSETS.get("bgm").mime, bytes: ASSETS.get("bgm").bytes });
-        return model;
-      } catch (e) { errs.push(`${model}: ${e.message}`); if (e.status !== 400) break; }
-    }
-  }
-  throw new Error(errs.join(" ; "));
-}
 // 時刻と乱数の種だけで決まる、ループしやすい BGM を OfflineAudioContext で合成する
 const SYNTH = {
   cyber: { bpm: 112, minor: true, drums: "four", arp: "square", bass: 8, pad: "sawtooth", cut: 1400 },
@@ -747,11 +730,12 @@ const SYNTH = {
   calm: { bpm: 84, minor: false, drums: null, arp: "triangle", bass: 1, pad: "triangle", cut: 1600 }
 };
 async function synthBgm(style, seconds) {
-  const st = SYNTH[style] || SYNTH.stylish; const sr = 44100; seconds = Math.max(8, Math.min(seconds, 240));
+  // 8 小節のループだけを合成する（再生と書き出しでは BGM をループするので、長い動画でも合成は数秒で済む）
+  const st = SYNTH[style] || SYNTH.stylish; const sr = 44100;
+  const beat = 60 / st.bpm, bar = beat * 4, bars = 8; seconds = bars * bar;
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sr), sr);
-  const beat = 60 / st.bpm, bar = beat * 4, bars = Math.ceil(seconds / bar);
   const master = ctx.createGain(); const comp = ctx.createDynamicsCompressor(); master.connect(comp); comp.connect(ctx.destination);
-  master.gain.setValueAtTime(0, 0); master.gain.linearRampToValueAtTime(0.55, 2); master.gain.setValueAtTime(0.55, Math.max(2, seconds - 3)); master.gain.linearRampToValueAtTime(0, seconds);
+  master.gain.value = 0.85;
   let seed = 12345; const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
   const noise = ctx.createBuffer(1, sr, sr); const nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = rnd() * 2 - 1;
   const prog = st.minor ? [[0, 3, 7], [-4, 0, 3], [-7, -3, 0], [-2, 2, 5]] : [[0, 4, 7], [-5, -1, 2], [-3, 0, 4], [-7, -3, 0]];
@@ -778,20 +762,16 @@ async function synthBgm(style, seconds) {
   return await ctx.startRendering();
 }
 async function makeSynthBgm(style) {
-  const buf = await synthBgm(style, (TL ? TL.total : 30) + 2);
+  await sleep(30); // 「作っています…」を先に表示させる
+  const buf = await synthBgm(style);
   ASSETS.set("bgm", { kind: "bgm", mime: "synth", bytes: new Uint8Array(0), buffer: buf });
   SB.meta.bgm.synth = style;
 }
 async function ensureSynthBgm() { if (SB.meta.bgm.synth && !ASSETS.get("bgm")) { await makeSynthBgm(SB.meta.bgm.synth); } }
-function bgmLabel() { const a = ASSETS.get("bgm"); if (!a) return "いまの BGM：なし"; if (a.mime === "synth") return `いまの BGM：自動で作った BGM（${$("#bgmStyle").querySelector(`[value="${SB.meta.bgm.synth}"]`)?.textContent || SB.meta.bgm.synth}・${a.buffer.duration.toFixed(0)} 秒）`; return `いまの BGM：${a.buffer.duration.toFixed(0)} 秒の音声（ループ再生）`; }
+function bgmLabel() { const a = ASSETS.get("bgm"); if (!a) return "いまの BGM：なし"; if (a.mime === "synth") return `いまの BGM：自動で作った BGM（${$("#bgmStyle").querySelector(`[value="${SB.meta.bgm.synth}"]`)?.textContent || SB.meta.bgm.synth}・${a.buffer.duration.toFixed(0)} 秒をループ）`; return `いまの BGM：${a.buffer.duration.toFixed(0)} 秒の音声（ループ再生）`; }
 function openBgm() { $("#bgmPrompt").value = defaultMusicPrompt(); const st = SB.meta.bgm.synth || { cyber: "cyber", cinematic: "cinematic", pop: "pop", whiteboard: "calm" }[TH().preset] || "stylish"; $("#bgmStyle").value = st; $("#bgmNow").textContent = bgmLabel(); $("#bgmMsg").textContent = ""; openModal("#mBgm"); }
-$("#bgmAi").onclick = async () => {
-  const b = $("#bgmAi"); b.disabled = true; b.textContent = "作っています…（1〜2 分）"; $("#bgmMsg").style.color = ""; $("#bgmMsg").textContent = "Gemini の音楽生成で作っています。";
-  try { snapshot(); const model = await genMusic($("#bgmPrompt").value.trim() || defaultMusicPrompt()); $("#bgmMsg").textContent = `できました（${model}）。「▶ 試聴」で確かめてください。`; status("AI で BGM を作りました", "ok"); }
-  catch (e) { $("#bgmMsg").style.color = "#ff8a8a"; $("#bgmMsg").textContent = "AI では作れませんでした。「自動で作る」か「ファイルから」を使ってください。（" + e.message.slice(0, 300) + "）"; }
-  b.disabled = false; b.textContent = "AI で作る"; $("#bgmNow").textContent = bgmLabel(); renderSceneButtons();
-};
-$("#bgmSynth").onclick = async () => { const b = $("#bgmSynth"); b.disabled = true; $("#bgmMsg").style.color = ""; $("#bgmMsg").textContent = "作っています…（10〜40 秒）"; try { snapshot(); await makeSynthBgm($("#bgmStyle").value); $("#bgmMsg").textContent = "できました。「▶ 試聴」で確かめてください。"; status("BGM を自動で作りました", "ok"); } catch (e) { $("#bgmMsg").textContent = "作れませんでした: " + e.message; } b.disabled = false; $("#bgmNow").textContent = bgmLabel(); };
+$("#bgmCopy").onclick = async () => { const t = $("#bgmPrompt").value; try { await Promise.race([navigator.clipboard.writeText(t), sleep(1000).then(() => { throw new Error("timeout"); })]); } catch (e) { $("#bgmPrompt").select(); document.execCommand("copy"); } $("#bgmMsg").style.color = ""; $("#bgmMsg").textContent = "コピーしました。Gemini の「音楽を作成」に貼ってください。"; };
+$("#bgmSynth").onclick = async () => { const b = $("#bgmSynth"); b.disabled = true; $("#bgmMsg").style.color = ""; $("#bgmMsg").textContent = "作っています…"; try { snapshot(); await makeSynthBgm($("#bgmStyle").value); $("#bgmMsg").textContent = "できました。「▶ 試聴」で確かめてください。"; status("BGM を自動で作りました", "ok"); } catch (e) { $("#bgmMsg").textContent = "作れませんでした: " + e.message; } b.disabled = false; $("#bgmNow").textContent = bgmLabel(); };
 $("#bgmFile").onclick = () => $("#fileBgm").click();
 $("#bgmNone").onclick = () => { snapshot(); ASSETS.delete("bgm"); delete SB.meta.bgm.synth; $("#bgmNow").textContent = bgmLabel(); status("BGM を外しました"); };
 let bgmPreview = null;
