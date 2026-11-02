@@ -1,10 +1,10 @@
-/*! Motion Studio engine v1.1.0
+/*! Motion Studio engine v1.2.0
  * ブラウザだけで動くモーショングラフィックス動画の編集アプリ（Gemini の Canvas 用）。
  * 使い方：読み込み用の HTML に <script type="application/json" id="storyboard"> と const apiKey = ""; を置き、このファイルを読み込む。
  * 元ファイル：gemini-video-skill/src/studio.html（scripts/build_engine.py で生成。直接編集しない）
  */
-window.MS_ENGINE = "1.1.0";
-document.body.insertAdjacentHTML("afterbegin", "<div id=\"app\">\n  <div id=\"top\">\n    <span class=\"title\" id=\"projTitle\">Motion Studio</span>\n    <button id=\"btnPlay\" class=\"primary\">▶ 再生</button>\n    <button id=\"btnGen\" class=\"hideBig\" title=\"まだ無い声と画像だけを作ります\">声と画像を作る</button>\n    <button id=\"btnBgm\" class=\"hideBig\">BGM</button>\n    <label class=\"hideBig note\" style=\"display:flex;align-items:center;gap:4px\">音量<input id=\"bgmVol\" type=\"range\" min=\"0\" max=\"0.6\" step=\"0.01\" style=\"width:80px\"></label>\n    <select id=\"voiceSel\" class=\"hideBig\" style=\"width:auto\" title=\"ナレーションの声\"></select>\n    <span class=\"sp\"></span>\n    <button id=\"btnUndo\" class=\"hideBig\">1つ前に戻す</button>\n    <button id=\"btnTexts\" class=\"hideBig\">画面の文字を全て表示</button>\n    <button id=\"btnCopy\" class=\"hideBig\" title=\"手直しを含めた台本データをコピーして、Gemini のチャットに貼り付けます\">編集内容をコピー</button>\n    <button id=\"btnSave\" class=\"hideBig\">保存</button>\n    <button id=\"btnPaste\" class=\"hideBig\" title=\"Gemini がチャットに出した台本データ（JSON）を貼り付けます\">台本を貼る</button>\n    <button id=\"btnLoad\" class=\"hideBig\">読込</button>\n    <button id=\"btnBig\">大きく表示</button>\n    <button id=\"btnExport\" class=\"primary hideBig\">書き出す MP4</button>\n  </div>\n  <div id=\"main\">\n    <div id=\"stageWrap\"><canvas id=\"stage\"></canvas><textarea id=\"editBox\"></textarea></div>\n    <div id=\"side\"></div>\n  </div>\n  <div id=\"bottom\">\n    <div id=\"scenes\"></div>\n    <input id=\"seek\" type=\"range\" min=\"0\" max=\"1000\" value=\"0\">\n    <span id=\"time\">0:00 / 0:00</span>\n    <span id=\"status\"></span>\n  </div>\n</div>\n\n<div class=\"modal\" id=\"mTexts\"><div class=\"box\"><h2>画面の文字（まとめて修正）</h2><table class=\"alltexts\" id=\"allTexts\" style=\"width:100%\"></table><div class=\"row\"><button id=\"allTextsApply\" class=\"primary\">反映する</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mExport\"><div class=\"box\"><h2 id=\"expTitle\">書き出し中</h2><div class=\"bar\"><i id=\"expBar\"></i></div><p class=\"note\" id=\"expMsg\"></p><div class=\"row\"><button id=\"expCancel\">中止</button></div></div></div>\n<div class=\"modal\" id=\"mPaste\"><div class=\"box\"><h2>台本データを貼り付け</h2><p class=\"note\">Gemini がチャットに出した台本データ（<code>{\"meta\": … \"scenes\": …}</code> の JSON）を、そのまま下に貼り付けて「読み込む」を押してください。前後の文章や ```json の行が混ざっていても大丈夫です。</p><textarea id=\"pasteText\" style=\"height:280px;font-family:monospace;font-size:12px\"></textarea><p class=\"note\" id=\"pasteMsg\"></p><div class=\"row\"><button id=\"pasteDo\" class=\"primary\">読み込む</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mCopy\"><div class=\"box\"><h2>編集内容をコピー</h2><p class=\"note\">下の文章を全部コピーして、Gemini のチャット欄に貼り付け、続けて「直してほしいこと」を書いて送ってください。手直しした文字はそのまま引き継がれます。</p><textarea id=\"copyText\" style=\"height:300px;font-family:monospace;font-size:12px\"></textarea><div class=\"row\"><button id=\"copyDo\" class=\"primary\">コピー</button><button data-close>閉じる</button></div></div></div>\n<input type=\"file\" id=\"fileBgm\" accept=\"audio/*\" hidden>\n<input type=\"file\" id=\"fileImg\" accept=\"image/*\" hidden>\n<input type=\"file\" id=\"fileProj\" accept=\".json,application/json\" hidden>\n<input type=\"file\" id=\"fileVoice\" accept=\"audio/*\" hidden>");
+window.MS_ENGINE = "1.2.0";
+document.body.insertAdjacentHTML("afterbegin", "<div id=\"app\">\n  <div id=\"top\">\n    <span class=\"title\" id=\"projTitle\">Motion Studio</span>\n    <button id=\"btnPlay\" class=\"primary\">▶ 再生</button>\n    <button id=\"btnGen\" class=\"hideBig\" title=\"まだ無い声と画像だけを作ります\">声と画像を作る</button>\n    <button id=\"btnBgm\" class=\"hideBig\">BGM</button>\n    <label class=\"hideBig note\" style=\"display:flex;align-items:center;gap:4px\">音量<input id=\"bgmVol\" type=\"range\" min=\"0\" max=\"0.6\" step=\"0.01\" style=\"width:80px\"></label>\n    <select id=\"voiceSel\" class=\"hideBig\" style=\"width:auto\" title=\"ナレーションの声\"></select>\n    <span class=\"sp\"></span>\n    <button id=\"btnUndo\" class=\"hideBig\">1つ前に戻す</button>\n    <button id=\"btnTexts\" class=\"hideBig\">画面の文字を全て表示</button>\n    <button id=\"btnCopy\" class=\"hideBig\" title=\"手直しを含めた台本データをコピーして、Gemini のチャットに貼り付けます\">編集内容をコピー</button>\n    <button id=\"btnSave\" class=\"hideBig\">保存</button>\n    <button id=\"btnPaste\" class=\"hideBig\" title=\"Gemini がチャットに出した台本データ（JSON）を貼り付けます\">台本を貼る</button>\n    <button id=\"btnLoad\" class=\"hideBig\">読込</button>\n    <button id=\"btnBig\">大きく表示</button>\n    <select id=\"quality\" class=\"hideBig\" style=\"width:auto\" title=\"書き出す MP4 の画質（ファイルの大きさ）\"><option value=\"8\">高画質</option><option value=\"5\" selected>標準</option><option value=\"2.5\">軽量</option></select>\n    <button id=\"btnExport\" class=\"primary hideBig\">書き出す MP4</button>\n  </div>\n  <div id=\"main\">\n    <div id=\"stageWrap\"><canvas id=\"stage\"></canvas><textarea id=\"editBox\"></textarea></div>\n    <div id=\"side\"></div>\n  </div>\n  <div id=\"bottom\">\n    <div id=\"scenes\"></div>\n    <input id=\"seek\" type=\"range\" min=\"0\" max=\"1000\" value=\"0\">\n    <span id=\"time\">0:00 / 0:00</span>\n    <span id=\"status\"></span>\n  </div>\n</div>\n\n<div class=\"modal\" id=\"mTexts\"><div class=\"box\"><h2>画面の文字（まとめて修正）</h2><table class=\"alltexts\" id=\"allTexts\" style=\"width:100%\"></table><div class=\"row\"><button id=\"allTextsApply\" class=\"primary\">反映する</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mGen\"><div class=\"box\"><h2 id=\"genTitle\">声と画像を作っています</h2><div class=\"bar\"><i id=\"genBar\"></i></div><p class=\"note\" id=\"genMsg\"></p><div class=\"row\"><button data-close id=\"genClose\" style=\"display:none\">閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mExport\"><div class=\"box\"><h2 id=\"expTitle\">書き出し中</h2><div class=\"bar\"><i id=\"expBar\"></i></div><p class=\"note\" id=\"expMsg\"></p><div class=\"row\"><button id=\"expCancel\">中止</button></div></div></div>\n<div class=\"modal\" id=\"mPaste\"><div class=\"box\"><h2>台本データを貼り付け</h2><p class=\"note\">Gemini がチャットに出した台本データ（<code>{\"meta\": … \"scenes\": …}</code> の JSON）を、そのまま下に貼り付けて「読み込む」を押してください。前後の文章や ```json の行が混ざっていても大丈夫です。</p><textarea id=\"pasteText\" style=\"height:280px;font-family:monospace;font-size:12px\"></textarea><p class=\"note\" id=\"pasteMsg\"></p><div class=\"row\"><button id=\"pasteDo\" class=\"primary\">読み込む</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mCopy\"><div class=\"box\"><h2>編集内容をコピー</h2><p class=\"note\">下の文章を全部コピーして、Gemini のチャット欄に貼り付け、続けて「直してほしいこと」を書いて送ってください。手直しした文字はそのまま引き継がれます。</p><textarea id=\"copyText\" style=\"height:300px;font-family:monospace;font-size:12px\"></textarea><div class=\"row\"><button id=\"copyDo\" class=\"primary\">コピー</button><button data-close>閉じる</button></div></div></div>\n<input type=\"file\" id=\"fileBgm\" accept=\"audio/*\" hidden>\n<input type=\"file\" id=\"fileImg\" accept=\"image/*\" hidden>\n<input type=\"file\" id=\"fileProj\" accept=\".json,application/json\" hidden>\n<input type=\"file\" id=\"fileVoice\" accept=\"audio/*\" hidden>");
 /* ============================================================
    CONFIG（Canvas の API 設定）
    - apiKey は空のままにする。Gemini の Canvas が実行時に自動で入れる。
@@ -114,7 +114,8 @@ function sceneImage(s) { if (!s.image) return null; const k = s.image.asset || i
 /* ============================================================
    タイムライン（シーンの長さ・字幕のタイミング）
 ============================================================ */
-const VOICE_LEAD = 0.35, VOICE_TAIL = 0.55, CHARS_PER_SEC = 6.2;
+// 声ができる前の長さの見積もり。実測：Charon（低く落ち着いた読み）で 1 秒あたり約 4.5 字（2026-11-03）
+const VOICE_LEAD = 0.35, VOICE_TAIL = 0.55, CHARS_PER_SEC = 4.8;
 function computeTimeline() {
   let t = 0; const out = [];
   SB.scenes.forEach((s, i) => {
@@ -693,17 +694,20 @@ function loadImage(blob) { return new Promise((res, rej) => { const im = new Ima
 
 let genBusy = false;
 async function generateAll() {
-  if (genBusy) return; genBusy = true; $("#btnGen").disabled = true;
+  if (genBusy) return; genBusy = true; $("#btnGen").disabled = true; $("#btnGen").textContent = "生成中…";
   const jobs = [];
   SB.scenes.forEach(s => { if (s.narration && !sceneVoice(s)) jobs.push(["voice", s]); if (s.image && s.image.prompt && !sceneImage(s)) jobs.push(["image", s]); });
   let done = 0, fail = 0; const errs = [];
-  const run = async ([k, s]) => { try { k === "voice" ? await genVoice(s) : await genImage(s); } catch (e) { fail++; errs.push(`${s.id} ${k === "voice" ? "声" : "画像"}: ${e.message}`); } done++; status(`生成中 ${done}/${jobs.length}（声 ${usage.tts}・画像 ${usage.image} 回使用）`); rebuild(true); };
+  const nv = jobs.filter(j => j[0] === "voice").length, ni = jobs.length - nv;
+  const prog = () => { $("#genBar").style.width = Math.round(done / Math.max(1, jobs.length) * 100) + "%"; $("#genMsg").textContent = `${done} / ${jobs.length} 件（声 ${nv} 本・画像 ${ni} 枚）。1〜3 分かかります。この画面のままお待ちください。` + (fail ? `　失敗 ${fail} 件` : ""); };
+  if (jobs.length) { $("#genTitle").textContent = "声と画像を作っています"; $("#genClose").style.display = "none"; prog(); openModal("#mGen"); }
+  const run = async ([k, s]) => { try { k === "voice" ? await genVoice(s) : await genImage(s); } catch (e) { fail++; errs.push(`シーン ${SB.scenes.indexOf(s) + 1} の${k === "voice" ? "声" : "画像"}: ${e.message}`); } done++; prog(); status(`生成中 ${done}/${jobs.length}（声 ${usage.tts}・画像 ${usage.image} 回使用）`); rebuild(true); };
   const q = jobs.slice(); const workers = Array.from({ length: 2 }, async () => { while (q.length) await run(q.shift()); });
   await Promise.all(workers);
-  genBusy = false; $("#btnGen").disabled = false; rebuild();
+  genBusy = false; $("#btnGen").disabled = false; $("#btnGen").textContent = "声と画像を作る"; rebuild();
   if (!jobs.length) status("作る必要のある声・画像はありません", "ok");
-  else if (fail) { status(`完了（失敗 ${fail} 件）: ${errs[0]}`, "err"); console.warn(errs); }
-  else status(`声と画像ができました（今回 声 ${usage.tts}・画像 ${usage.image} 回）`, "ok");
+  else if (fail) { status(`完了（失敗 ${fail} 件）: ${errs[0]}`, "err"); console.warn(errs); $("#genTitle").textContent = `できました（失敗 ${fail} 件）`; $("#genMsg").textContent = errs.join("　/　") + "　→ もう一度「声と画像を作る」を押すと、失敗した分だけ作り直します。"; $("#genClose").style.display = ""; }
+  else { status(`声と画像ができました（今回 声 ${usage.tts}・画像 ${usage.image} 回）。「▶ 再生」で確認してください`, "ok"); $("#genTitle").textContent = "声と画像ができました"; setTimeout(() => { if (!genBusy) $("#mGen").style.display = "none"; }, 1200); }
 }
 
 /* ============================================================
@@ -947,14 +951,15 @@ document.querySelectorAll("[data-close]").forEach(b => b.onclick = closeModals);
    2) 使えない環境では MediaRecorder（実時間で録画。mp4 か webm）
 ============================================================ */
 let exportCancel = false;
-$("#expCancel").onclick = () => { exportCancel = true; };
+let exportRunning = false;
+$("#expCancel").onclick = () => { if (exportRunning) exportCancel = true; else closeModals(); };
 function expProgress(p, msg) { $("#expBar").style.width = Math.round(p * 100) + "%"; if (msg) $("#expMsg").textContent = msg; }
 async function renderMix(sr) {
   const len = Math.ceil(TL.total * sr); const off = new OfflineAudioContext(2, len, sr);
   scheduleAudio(off, off.destination, 0); return await off.startRendering();
 }
 async function pickVideoCodec(w, h, fps) {
-  const br = (w * h >= 1920 * 1080) ? 8e6 : 5e6;
+  const br = (+($("#quality") && $("#quality").value) || 5) * 1e6;
   for (const codec of ["avc1.640028", "avc1.4d0028", "avc1.42e028", "avc1.42001f"]) {
     const cfg = { codec, width: w, height: h, bitrate: br, framerate: fps, avc: { format: "avc" }, latencyMode: "realtime" };
     try { const r = await VideoEncoder.isConfigSupported(cfg); if (r.supported) return cfg; } catch (e) { }
@@ -966,7 +971,7 @@ async function pickAudioCodec(sr) {
   return null;
 }
 async function exportMP4() {
-  if (playing) stop(); exportCancel = false; openModal("#mExport"); $("#expTitle").textContent = "書き出し中"; expProgress(0, "準備しています…");
+  if (playing) stop(); exportCancel = false; exportRunning = true; $("#expCancel").textContent = "中止"; openModal("#mExport"); $("#expTitle").textContent = "書き出し中"; expProgress(0, "準備しています…");
   const fps = SB.meta.fps || 30; const sr = 48000;
   try {
     const okWC = typeof VideoEncoder !== "undefined" && typeof AudioEncoder !== "undefined";
@@ -974,7 +979,7 @@ async function exportMP4() {
     if (vcfg && acfg) { await exportWebCodecs(vcfg, acfg, fps, sr); }
     else { await exportRecorder(fps); }
   } catch (e) { console.error(e); $("#expTitle").textContent = "書き出しに失敗しました"; expProgress(0, e.message + "（もう一度押すと、録画方式で書き出します）"); window.__forceRecorder = true; return; }
-  finally { draw(); }
+  finally { exportRunning = false; $("#expCancel").textContent = "閉じる"; draw(); }
 }
 async function exportWebCodecs(vcfg, acfg, fps, sr) {
   if (window.__forceRecorder) { window.__forceRecorder = false; return exportRecorder(fps); }
