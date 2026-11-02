@@ -1,9 +1,9 @@
-/*! Motion Studio engine v1.4.0
+/*! Motion Studio engine v1.4.1
  * ブラウザだけで動くモーショングラフィックス動画の編集アプリ（Gemini の Canvas 用）。
  * 使い方：読み込み用の HTML に <script type="application/json" id="storyboard"> と const apiKey = ""; を置き、このファイルを読み込む。
  * 元ファイル：gemini-video-skill/src/studio.html（scripts/build_engine.py で生成。直接編集しない）
  */
-window.MS_ENGINE = "1.4.0";
+window.MS_ENGINE = "1.4.1";
 document.body.insertAdjacentHTML("afterbegin", "<div id=\"app\">\n  <div id=\"top\">\n    <span class=\"title\" id=\"projTitle\">Motion Studio</span>\n    <button id=\"btnPlay\" class=\"primary\">▶ 再生</button>\n    <button id=\"btnGen\" class=\"hideBig\" title=\"まだ無い声と画像だけを作ります\">声と画像を作る</button>\n    <button id=\"btnBgm\" class=\"hideBig\">BGM</button>\n    <label class=\"hideBig note\" style=\"display:flex;align-items:center;gap:4px\">音量<input id=\"bgmVol\" type=\"range\" min=\"0\" max=\"0.6\" step=\"0.01\" style=\"width:80px\"></label>\n    <select id=\"voiceSel\" class=\"hideBig\" style=\"width:auto\" title=\"ナレーションの声\"></select>\n    <span class=\"sp\"></span>\n    <button id=\"btnUndo\" class=\"hideBig\">1つ前に戻す</button>\n    <button id=\"btnTexts\" class=\"hideBig\">画面の文字を全て表示</button>\n    <button id=\"btnCopy\" class=\"hideBig\" title=\"手直しを含めた台本データをコピーして、Gemini のチャットに貼り付けます\">編集内容をコピー</button>\n    <button id=\"btnSave\" class=\"hideBig\">保存</button>\n    <button id=\"btnPaste\" class=\"hideBig\" title=\"Gemini がチャットに出した台本データ（JSON）を貼り付けます\">台本を貼る</button>\n    <button id=\"btnLoad\" class=\"hideBig\">読込</button>\n    <button id=\"btnBig\">大きく表示</button>\n    <select id=\"quality\" class=\"hideBig\" style=\"width:auto\" title=\"書き出す MP4 の画質（ファイルの大きさ）\"><option value=\"8\">高画質</option><option value=\"5\" selected>標準</option><option value=\"2.5\">軽量</option></select>\n    <button id=\"btnExport\" class=\"primary hideBig\">書き出す MP4</button>\n  </div>\n  <div id=\"main\">\n    <div id=\"stageWrap\"><canvas id=\"stage\"></canvas><textarea id=\"editBox\"></textarea></div>\n    <div id=\"side\"></div>\n  </div>\n  <div id=\"bottom\">\n    <div id=\"scenes\"></div>\n    <input id=\"seek\" type=\"range\" min=\"0\" max=\"1000\" value=\"0\">\n    <span id=\"time\">0:00 / 0:00</span>\n    <span id=\"status\"></span>\n  </div>\n</div>\n\n<div class=\"modal\" id=\"mTexts\"><div class=\"box\"><h2>画面の文字（まとめて修正）</h2><table class=\"alltexts\" id=\"allTexts\" style=\"width:100%\"></table><div class=\"row\"><button id=\"allTextsApply\" class=\"primary\">反映する</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mBgm\"><div class=\"box\"><h2>BGM</h2><p class=\"note\" id=\"bgmNow\"></p>\n<h3 style=\"font-size:14px;margin:14px 0 4px\">自動で作る（数秒・利用枠を使わない）</h3><div class=\"row\"><select id=\"bgmStyle\" style=\"width:auto\"><option value=\"cyber\">サイバー</option><option value=\"cinematic\">シネマ</option><option value=\"stylish\">スタイリッシュ</option><option value=\"pop\">ポップ</option><option value=\"calm\">やさしい（解説向け）</option></select><button id=\"bgmSynth\" class=\"primary\">自動で作る</button></div>\n<h3 style=\"font-size:14px;margin:14px 0 4px\">Gemini の「音楽を作成」で作る（質が高い）</h3><p class=\"note\">① 下のプロンプトをコピー → ② 新しいタブで Gemini の「音楽を作成」に貼り、ボーカルを「インストルメンタル」にして送信 → ③ ダウンロードで「音声のみ（MP3）」を保存 → ④「ファイルを選ぶ」で入れる</p><textarea id=\"bgmPrompt\" rows=\"3\"></textarea><div class=\"row\"><button id=\"bgmCopy\">プロンプトをコピー</button><button id=\"bgmFile\">ファイルを選ぶ</button><button id=\"bgmNone\">BGM なし</button></div>\n<p class=\"note\" id=\"bgmMsg\"></p><div class=\"row\"><button id=\"bgmPlay\">▶ 試聴（10 秒）</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mGen\"><div class=\"box\"><h2 id=\"genTitle\">声と画像を作っています</h2><div class=\"bar\"><i id=\"genBar\"></i></div><p class=\"note\" id=\"genMsg\"></p><div class=\"row\"><button data-close id=\"genClose\" style=\"display:none\">閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mExport\"><div class=\"box\"><h2 id=\"expTitle\">書き出し中</h2><div class=\"bar\"><i id=\"expBar\"></i></div><p class=\"note\" id=\"expMsg\"></p><div class=\"row\"><button id=\"expCancel\">中止</button></div></div></div>\n<div class=\"modal\" id=\"mPaste\"><div class=\"box\"><h2>台本データを貼り付け</h2><p class=\"note\">Gemini がチャットに出した台本データ（<code>{\"meta\": … \"scenes\": …}</code> の JSON）を、そのまま下に貼り付けて「読み込む」を押してください。前後の文章や ```json の行が混ざっていても大丈夫です。</p><textarea id=\"pasteText\" style=\"height:280px;font-family:monospace;font-size:12px\"></textarea><p class=\"note\" id=\"pasteMsg\"></p><div class=\"row\"><button id=\"pasteDo\" class=\"primary\">読み込む</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mCopy\"><div class=\"box\"><h2>編集内容をコピー</h2><p class=\"note\">下の文章を全部コピーして、Gemini のチャット欄に貼り付け、続けて「直してほしいこと」を書いて送ってください。手直しした文字はそのまま引き継がれます。</p><textarea id=\"copyText\" style=\"height:300px;font-family:monospace;font-size:12px\"></textarea><div class=\"row\"><button id=\"copyDo\" class=\"primary\">コピー</button><button data-close>閉じる</button></div></div></div>\n<input type=\"file\" id=\"fileBgm\" accept=\"audio/*\" hidden>\n<input type=\"file\" id=\"fileImg\" accept=\"image/*\" hidden>\n<input type=\"file\" id=\"fileProj\" accept=\".json,application/json\" hidden>\n<input type=\"file\" id=\"fileVoice\" accept=\"audio/*\" hidden>");
 /* ============================================================
    CONFIG（Canvas の API 設定）
@@ -687,10 +687,19 @@ async function genImage(s, force) {
   usage.image++;
   await restoreAsset(key, rec); DB.put(key, rec); s.image.asset = key;
 }
+// BGM の音の大きさをそろえる（RMS を目標値に。ピークは 0.98 まで）。自動合成の BGM は市販の曲より小さく、そのままだとナレーションの下で聞こえなかった（2026-11-03 実機）
+function normalizeBgm(buf, target = 0.2) {
+  let sum = 0, peak = 0, n = 0;
+  for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i += 3) { sum += d[i] * d[i]; n++; const a = Math.abs(d[i]); if (a > peak) peak = a; } }
+  const rms = Math.sqrt(sum / Math.max(1, n)); if (!rms || !peak) return buf;
+  const g = Math.min(target / rms, 0.98 / peak);
+  for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= g; }
+  return buf;
+}
 async function restoreAsset(key, rec) {
   const a = { kind: rec.kind, mime: rec.mime, bytes: rec.bytes instanceof Uint8Array ? rec.bytes : new Uint8Array(rec.bytes) };
   if (a.kind === "image") { a.img = await loadImage(new Blob([a.bytes], { type: a.mime })); }
-  else { a.buffer = await ac().decodeAudioData(a.bytes.slice().buffer); }
+  else { a.buffer = await ac().decodeAudioData(a.bytes.slice().buffer); if (a.kind === "bgm") normalizeBgm(a.buffer); }
   ASSETS.set(key, a); return a;
 }
 function loadImage(blob) { return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(blob); }); }
@@ -763,7 +772,7 @@ async function synthBgm(style, seconds) {
 }
 async function makeSynthBgm(style) {
   await sleep(30); // 「作っています…」を先に表示させる
-  const buf = await synthBgm(style);
+  const buf = normalizeBgm(await synthBgm(style));
   ASSETS.set("bgm", { kind: "bgm", mime: "synth", bytes: new Uint8Array(0), buffer: buf });
   SB.meta.bgm.synth = style;
 }
