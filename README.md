@@ -11,13 +11,13 @@ Gemini のスキル「Motion Studio」が作る短い HTML から、jsDelivr 経
 ## 読み込み方
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/JunSuzuki1973/motion-studio-engine@1/studio.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/JunSuzuki1973/motion-studio-engine@<コミットID>/studio.css">
 <script type="application/json" id="storyboard">{ "meta": {...}, "scenes": [...] }</script>
 <script>const apiKey = "";</script>
-<script src="https://cdn.jsdelivr.net/gh/JunSuzuki1973/motion-studio-engine@1/studio.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/JunSuzuki1973/motion-studio-engine@<コミットID>/studio.js"></script>
 ```
 
-`@1` は v1.x.x のタグのうち最新を指します。
+`@` の後ろは、このリポジトリのコミット ID（またはタグ・ブランチ名）を指定します。コミット ID で指定すると中身が固定されます。
 
 ## 開発
 
