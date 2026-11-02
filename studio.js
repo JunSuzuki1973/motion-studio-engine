@@ -1,10 +1,10 @@
-/*! Motion Studio engine v1.0.0
+/*! Motion Studio engine v1.1.0
  * ブラウザだけで動くモーショングラフィックス動画の編集アプリ（Gemini の Canvas 用）。
  * 使い方：読み込み用の HTML に <script type="application/json" id="storyboard"> と const apiKey = ""; を置き、このファイルを読み込む。
  * 元ファイル：gemini-video-skill/src/studio.html（scripts/build_engine.py で生成。直接編集しない）
  */
-window.MS_ENGINE = "1.0.0";
-document.body.insertAdjacentHTML("afterbegin", "<div id=\"app\">\n  <div id=\"top\">\n    <span class=\"title\" id=\"projTitle\">Motion Studio</span>\n    <button id=\"btnPlay\" class=\"primary\">▶ 再生</button>\n    <button id=\"btnGen\" class=\"hideBig\" title=\"まだ無い声と画像だけを作ります\">声と画像を作る</button>\n    <button id=\"btnBgm\" class=\"hideBig\">BGM</button>\n    <label class=\"hideBig note\" style=\"display:flex;align-items:center;gap:4px\">音量<input id=\"bgmVol\" type=\"range\" min=\"0\" max=\"0.6\" step=\"0.01\" style=\"width:80px\"></label>\n    <select id=\"voiceSel\" class=\"hideBig\" style=\"width:auto\" title=\"ナレーションの声\"></select>\n    <span class=\"sp\"></span>\n    <button id=\"btnUndo\" class=\"hideBig\">1つ前に戻す</button>\n    <button id=\"btnTexts\" class=\"hideBig\">画面の文字を全て表示</button>\n    <button id=\"btnCopy\" class=\"hideBig\" title=\"手直しを含めた台本データをコピーして、Gemini のチャットに貼り付けます\">編集内容をコピー</button>\n    <button id=\"btnSave\" class=\"hideBig\">保存</button>\n    <button id=\"btnLoad\" class=\"hideBig\">読込</button>\n    <button id=\"btnBig\">大きく表示</button>\n    <button id=\"btnExport\" class=\"primary hideBig\">書き出す MP4</button>\n  </div>\n  <div id=\"main\">\n    <div id=\"stageWrap\"><canvas id=\"stage\"></canvas><textarea id=\"editBox\"></textarea></div>\n    <div id=\"side\"></div>\n  </div>\n  <div id=\"bottom\">\n    <div id=\"scenes\"></div>\n    <input id=\"seek\" type=\"range\" min=\"0\" max=\"1000\" value=\"0\">\n    <span id=\"time\">0:00 / 0:00</span>\n    <span id=\"status\"></span>\n  </div>\n</div>\n\n<div class=\"modal\" id=\"mTexts\"><div class=\"box\"><h2>画面の文字（まとめて修正）</h2><table class=\"alltexts\" id=\"allTexts\" style=\"width:100%\"></table><div class=\"row\"><button id=\"allTextsApply\" class=\"primary\">反映する</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mExport\"><div class=\"box\"><h2 id=\"expTitle\">書き出し中</h2><div class=\"bar\"><i id=\"expBar\"></i></div><p class=\"note\" id=\"expMsg\"></p><div class=\"row\"><button id=\"expCancel\">中止</button></div></div></div>\n<div class=\"modal\" id=\"mCopy\"><div class=\"box\"><h2>編集内容をコピー</h2><p class=\"note\">下の文章を全部コピーして、Gemini のチャット欄に貼り付け、続けて「直してほしいこと」を書いて送ってください。手直しした文字はそのまま引き継がれます。</p><textarea id=\"copyText\" style=\"height:300px;font-family:monospace;font-size:12px\"></textarea><div class=\"row\"><button id=\"copyDo\" class=\"primary\">コピー</button><button data-close>閉じる</button></div></div></div>\n<input type=\"file\" id=\"fileBgm\" accept=\"audio/*\" hidden>\n<input type=\"file\" id=\"fileImg\" accept=\"image/*\" hidden>\n<input type=\"file\" id=\"fileProj\" accept=\".json,application/json\" hidden>\n<input type=\"file\" id=\"fileVoice\" accept=\"audio/*\" hidden>");
+window.MS_ENGINE = "1.1.0";
+document.body.insertAdjacentHTML("afterbegin", "<div id=\"app\">\n  <div id=\"top\">\n    <span class=\"title\" id=\"projTitle\">Motion Studio</span>\n    <button id=\"btnPlay\" class=\"primary\">▶ 再生</button>\n    <button id=\"btnGen\" class=\"hideBig\" title=\"まだ無い声と画像だけを作ります\">声と画像を作る</button>\n    <button id=\"btnBgm\" class=\"hideBig\">BGM</button>\n    <label class=\"hideBig note\" style=\"display:flex;align-items:center;gap:4px\">音量<input id=\"bgmVol\" type=\"range\" min=\"0\" max=\"0.6\" step=\"0.01\" style=\"width:80px\"></label>\n    <select id=\"voiceSel\" class=\"hideBig\" style=\"width:auto\" title=\"ナレーションの声\"></select>\n    <span class=\"sp\"></span>\n    <button id=\"btnUndo\" class=\"hideBig\">1つ前に戻す</button>\n    <button id=\"btnTexts\" class=\"hideBig\">画面の文字を全て表示</button>\n    <button id=\"btnCopy\" class=\"hideBig\" title=\"手直しを含めた台本データをコピーして、Gemini のチャットに貼り付けます\">編集内容をコピー</button>\n    <button id=\"btnSave\" class=\"hideBig\">保存</button>\n    <button id=\"btnPaste\" class=\"hideBig\" title=\"Gemini がチャットに出した台本データ（JSON）を貼り付けます\">台本を貼る</button>\n    <button id=\"btnLoad\" class=\"hideBig\">読込</button>\n    <button id=\"btnBig\">大きく表示</button>\n    <button id=\"btnExport\" class=\"primary hideBig\">書き出す MP4</button>\n  </div>\n  <div id=\"main\">\n    <div id=\"stageWrap\"><canvas id=\"stage\"></canvas><textarea id=\"editBox\"></textarea></div>\n    <div id=\"side\"></div>\n  </div>\n  <div id=\"bottom\">\n    <div id=\"scenes\"></div>\n    <input id=\"seek\" type=\"range\" min=\"0\" max=\"1000\" value=\"0\">\n    <span id=\"time\">0:00 / 0:00</span>\n    <span id=\"status\"></span>\n  </div>\n</div>\n\n<div class=\"modal\" id=\"mTexts\"><div class=\"box\"><h2>画面の文字（まとめて修正）</h2><table class=\"alltexts\" id=\"allTexts\" style=\"width:100%\"></table><div class=\"row\"><button id=\"allTextsApply\" class=\"primary\">反映する</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mExport\"><div class=\"box\"><h2 id=\"expTitle\">書き出し中</h2><div class=\"bar\"><i id=\"expBar\"></i></div><p class=\"note\" id=\"expMsg\"></p><div class=\"row\"><button id=\"expCancel\">中止</button></div></div></div>\n<div class=\"modal\" id=\"mPaste\"><div class=\"box\"><h2>台本データを貼り付け</h2><p class=\"note\">Gemini がチャットに出した台本データ（<code>{\"meta\": … \"scenes\": …}</code> の JSON）を、そのまま下に貼り付けて「読み込む」を押してください。前後の文章や ```json の行が混ざっていても大丈夫です。</p><textarea id=\"pasteText\" style=\"height:280px;font-family:monospace;font-size:12px\"></textarea><p class=\"note\" id=\"pasteMsg\"></p><div class=\"row\"><button id=\"pasteDo\" class=\"primary\">読み込む</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mCopy\"><div class=\"box\"><h2>編集内容をコピー</h2><p class=\"note\">下の文章を全部コピーして、Gemini のチャット欄に貼り付け、続けて「直してほしいこと」を書いて送ってください。手直しした文字はそのまま引き継がれます。</p><textarea id=\"copyText\" style=\"height:300px;font-family:monospace;font-size:12px\"></textarea><div class=\"row\"><button id=\"copyDo\" class=\"primary\">コピー</button><button data-close>閉じる</button></div></div></div>\n<input type=\"file\" id=\"fileBgm\" accept=\"audio/*\" hidden>\n<input type=\"file\" id=\"fileImg\" accept=\"image/*\" hidden>\n<input type=\"file\" id=\"fileProj\" accept=\".json,application/json\" hidden>\n<input type=\"file\" id=\"fileVoice\" accept=\"audio/*\" hidden>");
 /* ============================================================
    CONFIG（Canvas の API 設定）
    - apiKey は空のままにする。Gemini の Canvas が実行時に自動で入れる。
@@ -46,7 +46,14 @@ function setPath(o, p, v) { const ks = p.split("."); let a = o; for (let i = 0; 
 /* ============================================================
    状態
 ============================================================ */
-let SB = JSON.parse($("#storyboard").textContent);
+// 台本データ：前後に文章や ```json が付いていても、最初の { から最後の } までを読む
+function parseStoryboard(text) {
+  const m = String(text || "").match(/\{[\s\S]*\}/); if (!m) return null;
+  try { const j = JSON.parse(m[0]); return j && Array.isArray(j.scenes) && j.scenes.length ? j : null; } catch (e) { return null; }
+}
+let SB = parseStoryboard($("#storyboard").textContent);
+const NEED_PASTE = !SB;
+if (!SB) SB = { meta: { title: "台本を貼り付けてください" }, scenes: [{ template: "title", texts: { kicker: "【準備】", title: "台本データを\n貼り付けてください", sub: "上の「台本を貼る」から" } }] };
 const ASSETS = new Map();   // key -> {kind:'voice'|'image'|'bgm', buffer?, img?, bytes, mime}
 const undoStack = [];
 let cur = 0;                // 選択中のシーン
@@ -872,6 +879,13 @@ $("#btnSave").onclick = () => {
   download(JSON.stringify({ app: "motion-studio", version: 1, storyboard: SB, assets }), fileBase() + "_project.json", "application/json"); status("プロジェクトを保存しました（声・画像・BGM 込み）", "ok");
 };
 $("#btnLoad").onclick = () => $("#fileProj").click();
+$("#btnPaste").onclick = () => { $("#pasteMsg").textContent = ""; openModal("#mPaste"); $("#pasteText").focus(); };
+$("#pasteDo").onclick = () => {
+  const j = parseStoryboard($("#pasteText").value);
+  if (!j) { $("#pasteMsg").textContent = "台本データとして読めませんでした。{ から } までが全部入っているか確かめてください。"; $("#pasteMsg").style.color = "#ff8a8a"; return; }
+  snapshot(); SB = j; normalize(); relinkAssets(); cur = 0; playhead = 0; syncTopControls(); closeModals(); rebuild(); restoreFromCache();
+  status(`台本を読み込みました（${SB.scenes.length} シーン）。「声と画像を作る」を押してください`, "ok");
+};
 $("#fileProj").onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
   try {
@@ -1076,6 +1090,7 @@ $("#btnUndo").onclick = undo;
 $("#btnExport").onclick = exportMP4;
 $("#btnBig").onclick = () => { document.body.classList.toggle("big"); $("#btnBig").textContent = document.body.classList.contains("big") ? "元に戻す" : "大きく表示"; setTimeout(fitStage, 0); };
 $("#seek").oninput = e => { if (playing) stop(); playhead = TL.total * e.target.value / 1000; const sc = sceneAt(playhead); if (sc.i !== cur) { cur = sc.i; renderSceneButtons(); renderSide(); } draw(); };
+function syncTopControls() { $("#bgmVol").value = SB.meta.bgm.volume; const sel = $("#voiceSel"); if (![...sel.options].some(o => o.value === SB.meta.voice.name)) sel.prepend(h("option", { value: SB.meta.voice.name }, "声: " + SB.meta.voice.name)); sel.value = SB.meta.voice.name; }
 const bv = $("#bgmVol"); bv.value = SB.meta.bgm.volume; bv.oninput = () => { SB.meta.bgm.volume = +bv.value; if (playing) { stop(); play(); } };
 const vs = $("#voiceSel"); VOICES.forEach(v => { const o = h("option", { value: v }, "声: " + v); if (v === SB.meta.voice.name) o.selected = true; vs.append(o); });
 if (!VOICES.includes(SB.meta.voice.name)) vs.prepend(h("option", { value: SB.meta.voice.name, selected: "selected" }, "声: " + SB.meta.voice.name));
@@ -1086,3 +1101,4 @@ rebuild();
 restoreFromCache();
 (document.fonts && document.fonts.ready || Promise.resolve()).then(() => draw());
 status("準備できました。「声と画像を作る」を押してください");
+if (NEED_PASTE) { openModal("#mPaste"); status("台本データがありません。「台本を貼る」から貼り付けてください", "err"); }
