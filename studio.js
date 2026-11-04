@@ -1,9 +1,9 @@
-/*! Motion Studio engine v1.4.2
+/*! Motion Studio engine v1.5.0
  * ブラウザだけで動くモーショングラフィックス動画の編集アプリ（Gemini の Canvas 用）。
  * 使い方：読み込み用の HTML に <script type="application/json" id="storyboard"> と const apiKey = ""; を置き、このファイルを読み込む。
  * 元ファイル：gemini-video-skill/src/studio.html（scripts/build_engine.py で生成。直接編集しない）
  */
-window.MS_ENGINE = "1.4.2";
+window.MS_ENGINE = "1.5.0";
 document.body.insertAdjacentHTML("afterbegin", "<div id=\"app\">\n  <div id=\"top\">\n    <span class=\"title\" id=\"projTitle\">Motion Studio</span>\n    <button id=\"btnPlay\" class=\"primary\">▶ 再生</button>\n    <button id=\"btnGen\" class=\"hideBig\" title=\"まだ無い声と画像だけを作ります\">声と画像を作る</button>\n    <button id=\"btnBgm\" class=\"hideBig\">BGM</button>\n    <label class=\"hideBig note\" style=\"display:flex;align-items:center;gap:4px\">音量<input id=\"bgmVol\" type=\"range\" min=\"0\" max=\"0.6\" step=\"0.01\" style=\"width:80px\"></label>\n    <select id=\"voiceSel\" class=\"hideBig\" style=\"width:auto\" title=\"ナレーションの声\"></select>\n    <span class=\"sp\"></span>\n    <button id=\"btnUndo\" class=\"hideBig\">1つ前に戻す</button>\n    <button id=\"btnTexts\" class=\"hideBig\">画面の文字を全て表示</button>\n    <button id=\"btnCopy\" class=\"hideBig\" title=\"手直しを含めた台本データをコピーして、Gemini のチャットに貼り付けます\">編集内容をコピー</button>\n    <button id=\"btnSave\" class=\"hideBig\">保存</button>\n    <button id=\"btnPaste\" class=\"hideBig\" title=\"Gemini がチャットに出した台本データ（JSON）を貼り付けます\">台本を貼る</button>\n    <button id=\"btnLoad\" class=\"hideBig\">読込</button>\n    <button id=\"btnBig\">大きく表示</button>\n    <select id=\"quality\" class=\"hideBig\" style=\"width:auto\" title=\"書き出す MP4 の画質（ファイルの大きさ）\"><option value=\"8\">高画質</option><option value=\"5\" selected>標準</option><option value=\"2.5\">軽量</option></select>\n    <button id=\"btnExport\" class=\"primary hideBig\">書き出す MP4</button>\n  </div>\n  <div id=\"main\">\n    <div id=\"stageWrap\"><canvas id=\"stage\"></canvas><textarea id=\"editBox\"></textarea></div>\n    <div id=\"side\"></div>\n  </div>\n  <div id=\"bottom\">\n    <div id=\"scenes\"></div>\n    <input id=\"seek\" type=\"range\" min=\"0\" max=\"1000\" value=\"0\">\n    <span id=\"time\">0:00 / 0:00</span>\n    <span id=\"status\"></span>\n  </div>\n</div>\n\n<div class=\"modal\" id=\"mTexts\"><div class=\"box\"><h2>画面の文字（まとめて修正）</h2><table class=\"alltexts\" id=\"allTexts\" style=\"width:100%\"></table><div class=\"row\"><button id=\"allTextsApply\" class=\"primary\">反映する</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mBgm\"><div class=\"box\"><h2>BGM</h2><p class=\"note\" id=\"bgmNow\"></p>\n<h3 style=\"font-size:14px;margin:14px 0 4px\">自動で作る（数秒・利用枠を使わない）</h3><div class=\"row\"><select id=\"bgmStyle\" style=\"width:auto\"><option value=\"cyber\">サイバー</option><option value=\"cinematic\">シネマ</option><option value=\"stylish\">スタイリッシュ</option><option value=\"pop\">ポップ</option><option value=\"calm\">やさしい（解説向け）</option></select><button id=\"bgmSynth\" class=\"primary\">自動で作る</button></div>\n<h3 style=\"font-size:14px;margin:14px 0 4px\">Gemini の「音楽を作成」で作る（質が高い）</h3><p class=\"note\">① 下のプロンプトをコピー → ② 新しいタブで Gemini の「音楽を作成」に貼り、ボーカルを「インストルメンタル」にして送信 → ③ ダウンロードで「音声のみ（MP3）」を保存 → ④「ファイルを選ぶ」で入れる</p><textarea id=\"bgmPrompt\" rows=\"3\"></textarea><div class=\"row\"><button id=\"bgmCopy\">プロンプトをコピー</button><button id=\"bgmFile\">ファイルを選ぶ</button><button id=\"bgmNone\">BGM なし</button></div>\n<p class=\"note\" id=\"bgmMsg\"></p><div class=\"row\"><button id=\"bgmPlay\">▶ 試聴（10 秒）</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mGen\"><div class=\"box\"><h2 id=\"genTitle\">声と画像を作っています</h2><div class=\"bar\"><i id=\"genBar\"></i></div><p class=\"note\" id=\"genMsg\"></p><div class=\"row\"><button data-close id=\"genClose\" style=\"display:none\">閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mExport\"><div class=\"box\"><h2 id=\"expTitle\">書き出し中</h2><div class=\"bar\"><i id=\"expBar\"></i></div><p class=\"note\" id=\"expMsg\"></p><div class=\"row\"><button id=\"expCancel\">中止</button></div></div></div>\n<div class=\"modal\" id=\"mPaste\"><div class=\"box\"><h2>台本データを貼り付け</h2><p class=\"note\">Gemini がチャットに出した台本データ（<code>{\"meta\": … \"scenes\": …}</code> の JSON）を、そのまま下に貼り付けて「読み込む」を押してください。前後の文章や ```json の行が混ざっていても大丈夫です。</p><textarea id=\"pasteText\" style=\"height:280px;font-family:monospace;font-size:12px\"></textarea><p class=\"note\" id=\"pasteMsg\"></p><div class=\"row\"><button id=\"pasteDo\" class=\"primary\">読み込む</button><button data-close>閉じる</button></div></div></div>\n<div class=\"modal\" id=\"mCopy\"><div class=\"box\"><h2>編集内容をコピー</h2><p class=\"note\">下の文章を全部コピーして、Gemini のチャット欄に貼り付け、続けて「直してほしいこと」を書いて送ってください。手直しした文字はそのまま引き継がれます。</p><textarea id=\"copyText\" style=\"height:300px;font-family:monospace;font-size:12px\"></textarea><div class=\"row\"><button id=\"copyDo\" class=\"primary\">コピー</button><button data-close>閉じる</button></div></div></div>\n<input type=\"file\" id=\"fileBgm\" accept=\"audio/*\" hidden>\n<input type=\"file\" id=\"fileImg\" accept=\"image/*\" hidden>\n<input type=\"file\" id=\"fileProj\" accept=\".json,.txt,application/json,text/plain\" hidden>\n<input type=\"file\" id=\"fileVoice\" accept=\"audio/*\" hidden>");
 /* ============================================================
    CONFIG（Canvas の API 設定）
@@ -189,17 +189,38 @@ function fitText(text, maxW, maxH, startPx, minPx, w, lh = 1.25, fam) {
   return { px, lines, lh: px * lh, w: Math.max(0, ...lines.map(l => ctx.measureText(l).width)), h: lines.length * px * lh };
 }
 // 行ごとに下からせり上がる表示
+// 文字の入り方（シーンごとに drawScene が ENTER を決める）
+// rise：下からせり上がる／chars：1 文字ずつ／blur：ぼかしから／slide：横から滑り込む／type：タイプ打ち
+const ENTERS = { rise: "せり上がる", chars: "1文字ずつ", blur: "ぼかしから", slide: "スライド", type: "タイプ打ち" };
+let ENTER = "rise";
+let typeCursor = 0; // タイプ打ちで、1 つのシーンの文字のかたまりを順番に打つための時計（drawScene が 0 に戻す）
 function revealText(block, x, y, align, color, t, delay = 0, stagger = 0.08, dur = 0.6, w = 800, fam, path, sceneIdx) {
   ctx.font = font(block.px, w, fam); ctx.textAlign = align; ctx.textBaseline = "alphabetic"; ctx.fillStyle = color;
+  let typeAt = Math.max(delay, typeCursor);
   block.lines.forEach((ln, i) => {
-    const p = E.expo(prog(t, delay + i * stagger, dur));
-    if (p <= 0) return;
+    const st = delay + i * stagger;
     const ly = y + i * block.lh;
     const lw = ctx.measureText(ln).width;
     const lx = align === "center" ? x - lw / 2 : align === "right" ? x - lw : x;
-    ctx.save(); ctx.beginPath(); ctx.rect(lx - block.px, ly - block.px * 0.2, lw + block.px * 2, block.lh + block.px * 0.45); ctx.clip();
-    ctx.globalAlpha *= clamp(p * 1.4, 0, 1);
-    ctx.fillText(ln, x, ly + block.px * 1.1 * (1 - p) + block.px * 0.85);
+    const base = ly + block.px * 0.85;
+    if (ENTER === "chars") {
+      const chars = [...ln]; let cx = lx; ctx.save(); ctx.textAlign = "left";
+      chars.forEach((c, k) => { const cw = ctx.measureText(c).width; const q = E.back(prog(t, st + k * 0.028, 0.38)); if (q > 0) { ctx.save(); ctx.globalAlpha *= clamp(q * 1.6, 0, 1); ctx.translate(cx + cw / 2, base - block.px * 0.35); ctx.scale(lerp(0.4, 1, q), lerp(0.4, 1, q)); ctx.fillText(c, -cw / 2, block.px * 0.35 + (1 - q) * block.px * 0.3); ctx.restore(); } cx += cw; });
+      ctx.restore(); return;
+    }
+    if (ENTER === "type") {
+      const chars = [...ln]; const cps = 26; const n = Math.floor(clamp((t - typeAt) * cps, 0, chars.length)); const startAt = typeAt; typeAt += chars.length / cps + 0.12; typeCursor = typeAt;
+      if (t < startAt) return;
+      const shown = chars.slice(0, n).join(""); ctx.save(); ctx.textAlign = "left"; ctx.fillText(shown, lx, base);
+      if (n < chars.length || (i === block.lines.length - 1 && t < typeAt + 0.9 && Math.floor(t * 2.5) % 2 === 0)) { const sw = ctx.measureText(shown).width; ctx.fillStyle = TH().accent; ctx.fillRect(lx + sw + 4 * U, base - block.px * 0.82, Math.max(4 * U, block.px * 0.08), block.px * 0.95); }
+      ctx.restore(); return;
+    }
+    const p = E.expo(prog(t, st, dur));
+    if (p <= 0) return;
+    ctx.save();
+    if (ENTER === "blur") { ctx.globalAlpha *= clamp(p * 1.2, 0, 1); ctx.filter = `blur(${((1 - p) * 14 * U).toFixed(1)}px)`; ctx.fillText(ln, x, base); }
+    else if (ENTER === "slide") { ctx.globalAlpha *= clamp(p * 1.3, 0, 1); ctx.fillText(ln, x - (1 - p) * 120 * U, base); }
+    else { ctx.beginPath(); ctx.rect(lx - block.px, ly - block.px * 0.2, lw + block.px * 2, block.lh + block.px * 0.45); ctx.clip(); ctx.globalAlpha *= clamp(p * 1.4, 0, 1); ctx.fillText(ln, x, ly + block.px * 1.1 * (1 - p) + block.px * 0.85); }
     ctx.restore();
   });
   const bx = align === "center" ? x - block.w / 2 : align === "right" ? x - block.w : x;
@@ -543,12 +564,243 @@ T.kinetic = (s, t, d, i) => {
 };
 
 /* ============================================================
+   見せ方のバリエーション（型ごとに 2〜3 通り。standard は上の T.*）
+============================================================ */
+function countUp(raw, p) {
+  const m = String(raw).match(/^([^\d\-]*)(-?[\d,]+(?:\.\d+)?)(.*)$/); if (!m) return String(raw);
+  const num = parseFloat(m[2].replace(/,/g, "")); const dec = (m[2].split(".")[1] || "").length; let v = (num * p).toFixed(dec);
+  if (m[2].includes(",")) v = Number(v).toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  return m[1] + v + m[3];
+}
+const VX = {};
+VX.titleCenter = (s, t, d, i) => {
+  const th = TH(), S = safe(); const fg = bgImage(s, t, d, 0.55) ? "#ffffff" : th.fg;
+  const maxW = (S.r - S.l) * 0.92;
+  const title = fitText(s.texts.title || "", maxW, (PORTRAIT ? 560 : 380) * U, (PORTRAIT ? 116 : 120) * U, 48 * U, 900, 1.18);
+  const sub = s.texts.sub ? fitText(s.texts.sub, maxW, 140 * U, 42 * U, 24 * U, 600, 1.3) : null;
+  const cy = PORTRAIT ? H * 0.42 : H * 0.5; const top = cy - (title.h + (sub ? sub.h + 60 * U : 0)) / 2;
+  const p = E.expo(prog(t, 0.05, 0.9)); const lw = Math.max(title.w, 420 * U) * 0.7 * p;
+  ctx.fillStyle = th.accent; ctx.fillRect(W / 2 - lw / 2, top - 46 * U, lw, 4 * U);
+  if (s.texts.kicker) { ctx.font = font(30 * U, 800); const kw = ctx.measureText(s.texts.kicker).width + 32 * U; tag(s.texts.kicker, W / 2 - kw / 2, top - 130 * U, t, 0.15, i, "texts.kicker"); }
+  revealText(title, W / 2, top, "center", fg, t, 0.25, 0.1, 0.7, 900, null, "texts.title", i);
+  const by = top + title.h + 26 * U; ctx.fillStyle = th.accent; ctx.fillRect(W / 2 - lw / 2, by, lw, 4 * U);
+  if (sub) revealText(sub, W / 2, by + 34 * U, "center", alpha(fg, 0.85), t, 0.7, 0.08, 0.6, 600, null, "texts.sub", i);
+};
+VX.titleBig = (s, t, d, i) => {
+  const th = TH(), S = safe(); const fg = bgImage(s, t, d, 0.6) ? "#ffffff" : th.fg;
+  const title = fitText(s.texts.title || "", S.r - S.l, H * (PORTRAIT ? 0.5 : 0.58), (PORTRAIT ? 190 : 230) * U, 60 * U, 900, 1.08);
+  const y = (PORTRAIT ? H * 0.4 : H * 0.52) - title.h / 2;
+  const p = E.expo(prog(t, 0.05, 0.7)); ctx.fillStyle = th.accent; ctx.fillRect(S.l - 40 * U, y, 12 * U, title.h * p);
+  if (s.texts.kicker) tag(s.texts.kicker, S.l, (PORTRAIT ? S.t : S.t - 20 * U), t, 0.1, i, "texts.kicker");
+  revealText(title, S.l, y, "left", fg, t, 0.2, 0.12, 0.8, 900, null, "texts.title", i);
+  if (s.texts.sub) { const sub = fitText(s.texts.sub, (S.r - S.l) * 0.8, 120 * U, 40 * U, 24 * U, 600, 1.3); revealText(sub, S.l, y + title.h + 40 * U, "left", alpha(fg, 0.8), t, 0.8, 0.08, 0.6, 600, null, "texts.sub", i); }
+};
+VX.headlineBand = (s, t, d, i) => {
+  const th = TH(), S = safe();
+  if (!bgImage(s, t, d, 0.25)) placeholder(0, 0, W, H, s.image ? "背景画像（未生成）" : "");
+  const title = fitText(s.texts.title || "", (S.r - S.l) * 0.9, (PORTRAIT ? 420 : 260) * U, (PORTRAIT ? 96 : 100) * U, 40 * U, 900, 1.2);
+  const bh = title.h + 80 * U; const by = (PORTRAIT ? H * 0.46 : H * 0.5) - bh / 2;
+  const p = E.inOut(prog(t, 0.1, 0.7)); ctx.fillStyle = alpha(th.accent, 0.9); ctx.fillRect(0, by, W * p, bh);
+  ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.fillRect(0, by + bh, W * p, 6 * U);
+  if (s.texts.label) tag(s.texts.label, S.l, by - 70 * U, t, 0.3, i, "texts.label", "rgba(0,0,0,0.65)");
+  revealText(title, W / 2, by + 40 * U, "center", "#fff", t, 0.45, 0.1, 0.7, 900, null, "texts.title", i);
+};
+VX.headlinePanel = (s, t, d, i) => {
+  const th = TH(), S = safe();
+  if (!bgImage(s, t, d, 0.2)) placeholder(0, 0, W, H, s.image ? "背景画像（未生成）" : "");
+  const pw = PORTRAIT ? W - 2 * S.l + 40 * U : W * 0.5; const px = PORTRAIT ? S.l - 20 * U : S.l - 40 * U;
+  const title = fitText(s.texts.title || "", pw - 100 * U, (PORTRAIT ? 420 : 380) * U, (PORTRAIT ? 92 : 96) * U, 40 * U, 900, 1.2);
+  const ph = title.h + (s.texts.label ? 110 * U : 60 * U) + 40 * U; const py = PORTRAIT ? S.t + 40 * U : H * 0.5 - ph / 2;
+  const p = E.out(prog(t, 0.05, 0.6));
+  ctx.save(); ctx.globalAlpha *= p; ctx.translate((1 - p) * -60 * U, 0);
+  ctx.fillStyle = "rgba(8,10,16,0.72)"; roundRect(px, py, pw, ph, 14 * U); ctx.fill(); ctx.fillStyle = th.accent; ctx.fillRect(px, py, 10 * U, ph);
+  ctx.restore();
+  let y = py + 40 * U; if (s.texts.label) { tag(s.texts.label, px + 50 * U, y, t, 0.25, i, "texts.label"); y += 80 * U; }
+  revealText(title, px + 50 * U, y, "left", "#fff", t, 0.35, 0.1, 0.7, 900, null, "texts.title", i);
+};
+VX.bulletsCards = (s, t, d, i) => {
+  const th = TH(), S = safe(); const items = s.items || []; const n = Math.max(1, items.length);
+  const title = fitText(s.texts.title || "", S.r - S.l, 160 * U, (PORTRAIT ? 80 : 74) * U, 36 * U, 900);
+  revealText(title, PORTRAIT ? S.l : W / 2, S.t, PORTRAIT ? "left" : "center", th.fg, t, 0.1, 0.08, 0.6, 900, null, "texts.title", i);
+  const top = S.t + title.h + 60 * U; const cols = PORTRAIT ? 1 : (n <= 3 ? n : 2); const rows = Math.ceil(n / cols); const gap = 30 * U;
+  const cw = (S.r - S.l - gap * (cols - 1)) / cols; const ch = Math.min((PORTRAIT ? 230 : 300) * U, (S.b - top - gap * (rows - 1)) / rows);
+  const times = itemTimes(n, d, s, 0.5);
+  items.forEach((it, k) => {
+    const p = E.back(prog(t, times[k], 0.5)); if (p <= 0) return;
+    const cx = S.l + (k % cols) * (cw + gap), cy = top + Math.floor(k / cols) * (ch + gap);
+    ctx.save(); ctx.globalAlpha *= clamp(p, 0, 1); ctx.translate(cx + cw / 2, cy + ch / 2); ctx.scale(lerp(0.85, 1, p), lerp(0.85, 1, p)); ctx.translate(-(cx + cw / 2), -(cy + ch / 2));
+    ctx.fillStyle = alpha(th.fg, 0.07); roundRect(cx, cy, cw, ch, 18 * U); ctx.fill(); ctx.strokeStyle = alpha(th.accent, 0.7); ctx.lineWidth = 2 * U; ctx.stroke();
+    ctx.fillStyle = th.accent; ctx.font = font(64 * U, 900); ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText(String(k + 1).padStart(2, "0"), cx + 30 * U, cy + 24 * U);
+    const tb = fitText(it, cw - 60 * U, ch - 120 * U, (PORTRAIT ? 50 : 46) * U, 22 * U, 700, 1.3);
+    ctx.font = font(tb.px, 700); ctx.fillStyle = th.fg; ctx.textBaseline = "alphabetic"; tb.lines.forEach((ln, m) => ctx.fillText(ln, cx + 30 * U, cy + 110 * U + tb.px + m * tb.lh));
+    ctx.restore(); addHit(i, "items." + k, cx + 30 * U, cy + 110 * U, tb.w, tb.h);
+  });
+};
+VX.bulletsFocus = (s, t, d, i) => {
+  const th = TH(), S = safe(); const items = s.items || []; const n = Math.max(1, items.length);
+  const title = fitText(s.texts.title || "", S.r - S.l, 100 * U, 44 * U, 28 * U, 800);
+  revealText(title, S.l, S.t, "left", alpha(th.fg, 0.75), t, 0.05, 0.05, 0.5, 800, null, "texts.title", i);
+  const times = itemTimes(n, d, s, 0.4); let k = 0; times.forEach((tt, j) => { if (t >= tt) k = j; });
+  const p = E.out(prog(t, times[k], 0.55)); const cy = PORTRAIT ? H * 0.42 : H * 0.5;
+  ctx.save(); ctx.globalAlpha = 0.12 * p; ctx.fillStyle = th.accent; ctx.font = font((PORTRAIT ? 420 : 460) * U, 900); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(k + 1), W / 2, cy); ctx.restore();
+  const tb = fitText(items[k] || "", (S.r - S.l) * 0.9, (PORTRAIT ? 500 : 360) * U, (PORTRAIT ? 96 : 100) * U, 40 * U, 900, 1.2);
+  ctx.save(); ctx.globalAlpha *= p; ctx.font = font(tb.px, 900); ctx.fillStyle = th.fg; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  tb.lines.forEach((ln, m) => ctx.fillText(ln, W / 2, cy - tb.h / 2 + tb.px * 0.9 + m * tb.lh + (1 - p) * 40 * U)); ctx.restore();
+  addHit(i, "items." + k, W / 2 - tb.w / 2, cy - tb.h / 2, tb.w, tb.h);
+  const dy = PORTRAIT ? H * 0.62 : S.b + 10 * U; for (let j = 0; j < n; j++) { ctx.fillStyle = j <= k ? th.accent : alpha(th.fg, 0.2); ctx.fillRect(W / 2 - n * 34 * U + j * 68 * U, dy, 56 * U, 8 * U); }
+};
+VX.statBar = (s, t, d, i) => {
+  const th = TH(), S = safe(); const fg = bgImage(s, t, d, 0.6) ? "#ffffff" : th.fg;
+  const p = E.out(prog(t, 0.3, Math.min(1.6, d * 0.5)));
+  const shown = countUp(s.texts.value || "0", p);
+  const y0 = PORTRAIT ? H * 0.3 : H * 0.28;
+  if (s.texts.label) { const lb = fitText(s.texts.label, S.r - S.l, 140 * U, 54 * U, 28 * U, 800); revealText(lb, S.l, y0, "left", fg, t, 0.1, 0.08, 0.6, 800, null, "texts.label", i); }
+  const vb = fitText(shown + (s.texts.unit || ""), S.r - S.l, 300 * U, (PORTRAIT ? 220 : 240) * U, 80 * U, 900, 1.0);
+  ctx.save(); ctx.globalAlpha = clamp(p * 2, 0, 1); ctx.font = font(vb.px, 900); ctx.fillStyle = th.accent; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.fillText(shown, S.l, y0 + 140 * U + vb.px * 0.85);
+  const sw = ctx.measureText(shown).width; ctx.font = font(vb.px * 0.36, 800); ctx.fillStyle = fg; ctx.fillText(s.texts.unit || "", S.l + sw + 16 * U, y0 + 140 * U + vb.px * 0.85); ctx.restore();
+  addHit(i, "texts.value", S.l, y0 + 140 * U, sw, vb.px);
+  const by = y0 + 170 * U + vb.px; ctx.fillStyle = alpha(fg, 0.12); ctx.fillRect(S.l, by, S.r - S.l, 18 * U); ctx.fillStyle = th.accent; ctx.fillRect(S.l, by, (S.r - S.l) * E.inOut(prog(t, 0.3, Math.min(1.8, d * 0.55))), 18 * U);
+  if (s.texts.note) { const nb = fitText(s.texts.note, S.r - S.l, 90 * U, 32 * U, 20 * U, 500); revealText(nb, S.l, by + 50 * U, "left", alpha(fg, 0.7), t, 0.9, 0.06, 0.5, 500, null, "texts.note", i); }
+};
+VX.statPlain = (s, t, d, i) => {
+  const th = TH(), S = safe(); const fg = bgImage(s, t, d, 0.6) ? "#ffffff" : th.fg;
+  const p = E.out(prog(t, 0.25, Math.min(1.5, d * 0.5))); const cy = PORTRAIT ? H * 0.42 : H * 0.48;
+  if (s.texts.label) { const lb = fitText(s.texts.label, S.r - S.l, 120 * U, 48 * U, 26 * U, 700); revealText(lb, W / 2, cy - 260 * U, "center", alpha(fg, 0.85), t, 0.05, 0.06, 0.5, 700, null, "texts.label", i); }
+  const shown = countUp(s.texts.value || "0", p) + (s.texts.unit || "");
+  const vb = fitText(shown, S.r - S.l, 320 * U, (PORTRAIT ? 230 : 280) * U, 80 * U, 900, 1.0);
+  ctx.save(); ctx.globalAlpha = clamp(p * 2, 0, 1); ctx.font = font(vb.px, 900); ctx.fillStyle = fg; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(shown, W / 2, cy); ctx.restore();
+  addHit(i, "texts.value", W / 2 - vb.w / 2, cy - vb.px / 2, vb.w, vb.px);
+  const uw = vb.w * E.expo(prog(t, 0.6, 0.8)); ctx.fillStyle = th.accent; ctx.fillRect(W / 2 - uw / 2, cy + vb.px * 0.58, uw, 14 * U);
+  if (s.texts.note) { const nb = fitText(s.texts.note, S.r - S.l, 100 * U, 34 * U, 20 * U, 500); revealText(nb, W / 2, cy + vb.px * 0.58 + 50 * U, "center", alpha(fg, 0.7), t, 0.9, 0.06, 0.5, 500, null, "texts.note", i); }
+};
+VX.compareVersus = (s, t, d, i) => {
+  const th = TH(), S = safe(); const cols = s.cols || [{ label: "A", items: [] }, { label: "B", items: [] }];
+  const p = E.inOut(prog(t, 0, 0.7)); const sk = (PORTRAIT ? H * 0.04 : W * 0.06); const MY = H * 0.36; // 縦は字幕（下 3 割）にかからない高さで分ける
+  ctx.save(); ctx.fillStyle = alpha(th.fg, 0.06);
+  ctx.beginPath(); if (PORTRAIT) { ctx.moveTo(0, 0); ctx.lineTo(W, 0); ctx.lineTo(W, MY - sk); ctx.lineTo(0, MY + sk); } else { ctx.moveTo(0, 0); ctx.lineTo(W / 2 + sk, 0); ctx.lineTo(W / 2 - sk, H); ctx.lineTo(0, H); } ctx.closePath(); ctx.globalAlpha = p; ctx.fill();
+  ctx.fillStyle = alpha(th.accent, 0.2); ctx.beginPath(); if (PORTRAIT) { ctx.moveTo(0, MY + sk); ctx.lineTo(W, MY - sk); ctx.lineTo(W, H); ctx.lineTo(0, H); } else { ctx.moveTo(W / 2 + sk, 0); ctx.lineTo(W, 0); ctx.lineTo(W, H); ctx.lineTo(W / 2 - sk, H); } ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = th.accent; ctx.lineWidth = 6 * U; ctx.beginPath(); if (PORTRAIT) { ctx.moveTo(0, MY + sk); ctx.lineTo(W * p, MY + sk - 2 * sk * p); } else { ctx.moveTo(W / 2 + sk, 0); ctx.lineTo(W / 2 + sk - 2 * sk * p, H * p); } ctx.stroke(); ctx.restore();
+  if (s.texts.title) { const tt = fitText(s.texts.title, S.r - S.l, 90 * U, 40 * U, 24 * U, 800); revealText(tt, W / 2, PORTRAIT ? 150 * U : 40 * U, "center", alpha(th.fg, 0.8), t, 0.1, 0.05, 0.5, 800, null, "texts.title", i); }
+  const areas = PORTRAIT ? [[S.l, S.t, S.r - S.l, MY - sk - S.t - 40 * U], [S.l, MY + sk + 50 * U, S.r - S.l, S.b - MY - sk - 50 * U]] : [[S.l - 40 * U, H * 0.2, W / 2 - S.l - sk - 40 * U, H * 0.6], [W / 2 + sk + 60 * U, H * 0.2, W / 2 - S.l - sk - 60 * U, H * 0.6]];
+  areas.forEach(([x, y, w, h], k) => {
+    const c = cols[k] || { label: "", items: [] };
+    const lb = fitText(c.label || "", w, 140 * U, (PORTRAIT ? 80 : 86) * U, 36 * U, 900);
+    revealText(lb, x, y, "left", k ? th.accent : th.fg, t, 0.3 + k * 0.3, 0.08, 0.6, 900, null, `cols.${k}.label`, i);
+    let yy = y + lb.h + 40 * U;
+    (c.items || []).forEach((it, j) => {
+      const q = E.out(prog(t, 0.7 + k * 0.3 + j * 0.15, 0.5)); if (q <= 0) return;
+      const tb = fitText("— " + it, w, 100 * U, 42 * U, 22 * U, 600);
+      ctx.save(); ctx.globalAlpha *= q; ctx.font = font(tb.px, 600); ctx.fillStyle = th.fg; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; tb.lines.forEach((ln, m) => ctx.fillText(ln, x + (1 - q) * 30 * U, yy + tb.px + m * tb.lh)); ctx.restore();
+      addHit(i, `cols.${k}.items.${j}`, x, yy, tb.w, tb.h); yy += tb.h + 20 * U;
+    });
+  });
+  const vp = E.back(prog(t, 0.8, 0.5)); if (vp > 0) { ctx.save(); ctx.translate(W / 2, PORTRAIT ? MY : H / 2); ctx.scale(vp, vp); ctx.fillStyle = th.bg; ctx.strokeStyle = th.accent; ctx.lineWidth = 5 * U; ctx.beginPath(); ctx.arc(0, 0, 58 * U, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = th.accent; ctx.font = font(44 * U, 900); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(s.texts.vs || "VS", 0, 3); ctx.restore(); }
+};
+VX.stepsCards = (s, t, d, i) => {
+  const th = TH(), S = safe(); const items = s.items || []; const n = Math.max(1, items.length);
+  const title = fitText(s.texts.title || "", S.r - S.l, 150 * U, 72 * U, 36 * U, 900);
+  revealText(title, PORTRAIT ? S.l : W / 2, S.t, PORTRAIT ? "left" : "center", th.fg, t, 0.1, 0.08, 0.6, 900, null, "texts.title", i);
+  const top = S.t + title.h + 70 * U; const gap = (PORTRAIT ? 40 : 60) * U; const times = itemTimes(n, d, s, 0.5);
+  const cw = PORTRAIT ? S.r - S.l : (S.r - S.l - gap * (n - 1)) / n; const ch = PORTRAIT ? Math.min(220 * U, (S.b - top - gap * (n - 1)) / n) : Math.min(300 * U, S.b - top);
+  items.forEach((it, k) => {
+    const p = E.out(prog(t, times[k], 0.5)); const x = PORTRAIT ? S.l : S.l + k * (cw + gap), y = PORTRAIT ? top + k * (ch + gap) : top;
+    if (k > 0) { const ap = E.out(prog(t, times[k] - 0.1, 0.4)); ctx.save(); ctx.globalAlpha = ap; ctx.fillStyle = th.accent; ctx.beginPath(); if (PORTRAIT) { const ax = S.l + cw / 2, ay = y - gap / 2; ctx.moveTo(ax - 16 * U, ay - 8 * U); ctx.lineTo(ax + 16 * U, ay - 8 * U); ctx.lineTo(ax, ay + 10 * U); } else { const ax = x - gap / 2, ay = y + ch / 2; ctx.moveTo(ax - 8 * U, ay - 16 * U); ctx.lineTo(ax - 8 * U, ay + 16 * U); ctx.lineTo(ax + 10 * U, ay); } ctx.fill(); ctx.restore(); }
+    if (p <= 0) return;
+    ctx.save(); ctx.globalAlpha *= p; ctx.translate(0, (1 - p) * 40 * U);
+    ctx.fillStyle = alpha(th.fg, 0.07); roundRect(x, y, cw, ch, 16 * U); ctx.fill(); ctx.fillStyle = th.accent; ctx.fillRect(x, y, cw, 8 * U);
+    ctx.fillStyle = th.accent; ctx.font = font(30 * U, 900); ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("STEP " + (k + 1), x + 28 * U, y + 30 * U);
+    const tb = fitText(it, cw - 56 * U, ch - 110 * U, (PORTRAIT ? 48 : 44) * U, 22 * U, 700, 1.3);
+    ctx.font = font(tb.px, 700); ctx.fillStyle = th.fg; ctx.textBaseline = "alphabetic"; tb.lines.forEach((ln, m) => ctx.fillText(ln, x + 28 * U, y + 90 * U + tb.px + m * tb.lh));
+    ctx.restore(); addHit(i, "items." + k, x + 28 * U, y + 90 * U, tb.w, tb.h);
+  });
+};
+VX.quoteCenter = (s, t, d, i) => {
+  const th = TH(), S = safe(); const fg = bgImage(s, t, d, 0.7) ? "#ffffff" : th.fg;
+  const q = fitText(s.texts.quote || "", (S.r - S.l) * 0.88, (PORTRAIT ? 680 : 440) * U, (PORTRAIT ? 72 : 70) * U, 30 * U, 700, 1.5);
+  const cy = PORTRAIT ? H * 0.42 : H * 0.48; const top = cy - q.h / 2;
+  const p = E.expo(prog(t, 0.05, 0.8)); const lw = 160 * U * p; ctx.fillStyle = th.accent;
+  ctx.fillRect(W / 2 - lw / 2, top - 60 * U, lw, 4 * U); ctx.fillRect(W / 2 - lw / 2, top + q.h + 40 * U, lw, 4 * U);
+  ctx.font = font(30 * U, 800); const lt = s.texts.label || "引用"; const kw = ctx.measureText(lt).width + 32 * U; tag(lt, W / 2 - kw / 2, top - 150 * U, t, 0.05, i, "texts.label", alpha("#000000", 0.6));
+  revealText(q, W / 2, top, "center", fg, t, 0.25, 0.12, 0.7, 700, null, "texts.quote", i);
+  if (s.texts.source) { const sb = fitText(s.texts.source, S.r - S.l, 80 * U, 34 * U, 20 * U, 600); revealText(sb, W / 2, top + q.h + 70 * U, "center", alpha(fg, 0.7), t, 0.6 + q.lines.length * 0.12, 0.06, 0.6, 600, null, "texts.source", i); }
+};
+VX.splitOverlay = (s, t, d, i) => {
+  const th = TH(), S = safe(); const img = sceneImage(s);
+  if (!drawCover(img, 0, 0, W, H, t, d)) placeholder(0, 0, W, H);
+  const g = PORTRAIT ? ctx.createLinearGradient(0, H * 0.35, 0, H) : ctx.createLinearGradient(0, 0, W * 0.75, 0);
+  g.addColorStop(0, PORTRAIT ? "rgba(0,0,0,0)" : "rgba(0,0,0,0.85)"); g.addColorStop(1, PORTRAIT ? "rgba(0,0,0,0.88)" : "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  const tw = PORTRAIT ? S.r - S.l : W * 0.45;
+  const tb = fitText(s.texts.title || "", tw, 300 * U, 88 * U, 40 * U, 900); const bb = s.texts.body ? fitText(s.texts.body, tw, 380 * U, 42 * U, 22 * U, 500, 1.55) : null;
+  const total = tb.h + (bb ? 40 * U + bb.h : 0); const y = PORTRAIT ? S.b - total : H / 2 - total / 2;
+  accentBar(S.l, y - 30 * U, 120 * U, 7 * U, t, 0.3);
+  revealText(tb, S.l, y, "left", "#fff", t, 0.4, 0.1, 0.6, 900, null, "texts.title", i);
+  if (bb) revealText(bb, S.l, y + tb.h + 40 * U, "left", "rgba(255,255,255,0.88)", t, 0.7, 0.07, 0.6, 500, null, "texts.body", i);
+};
+VX.ctaCard = (s, t, d, i) => {
+  const th = TH(), S = safe(); const fg = bgImage(s, t, d, 0.65) ? "#ffffff" : th.fg; const items = s.items || [];
+  const cw = PORTRAIT ? S.r - S.l + 40 * U : W * 0.56; const cx = W / 2 - cw / 2;
+  const title = fitText(s.texts.title || "", cw - 120 * U, 260 * U, (PORTRAIT ? 88 : 84) * U, 40 * U, 900);
+  const ib = items.map(it => fitText(it, cw - 120 * U, 100 * U, 40 * U, 22 * U, 600));
+  const ch = 80 * U + title.h + 40 * U + ib.reduce((a, b) => a + b.h + 16 * U, 0) + (s.texts.button ? 160 * U : 40 * U);
+  const cy = (PORTRAIT ? H * 0.4 : H / 2) - ch / 2; const p = E.back(prog(t, 0.05, 0.6));
+  ctx.save(); ctx.globalAlpha *= clamp(p, 0, 1); ctx.translate(W / 2, cy + ch / 2); ctx.scale(lerp(0.9, 1, p), lerp(0.9, 1, p)); ctx.translate(-W / 2, -(cy + ch / 2));
+  ctx.fillStyle = "rgba(10,12,18,0.7)"; roundRect(cx, cy, cw, ch, 24 * U); ctx.fill(); ctx.strokeStyle = th.accent; ctx.lineWidth = 3 * U; ctx.stroke(); ctx.restore();
+  let y = cy + 70 * U; revealText(title, W / 2, y, "center", "#fff", t, 0.25, 0.1, 0.6, 900, null, "texts.title", i); y += title.h + 40 * U;
+  ib.forEach((b, k) => { revealText(b, W / 2, y, "center", "rgba(255,255,255,0.86)", t, 0.5 + k * 0.15, 0.06, 0.5, 600, null, "items." + k, i); y += b.h + 16 * U; });
+  if (s.texts.button) { const q = E.back(prog(t, 0.8 + items.length * 0.15, 0.5)); const pulse = 1 + 0.03 * Math.sin(t * 5); ctx.font = font(44 * U, 900); const bw = ctx.measureText(s.texts.button).width + 100 * U, bh = 96 * U, by = y + 24 * U; if (q > 0) { ctx.save(); ctx.translate(W / 2, by + bh / 2); ctx.scale(q * pulse, q * pulse); ctx.fillStyle = th.accent; roundRect(-bw / 2, -bh / 2, bw, bh, bh / 2); ctx.fill(); ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(s.texts.button, 0, 3); ctx.restore(); addHit(i, "texts.button", W / 2 - bw / 2, by, bw, bh); } }
+};
+VX.kineticStack = (s, t, d, i) => {
+  const th = TH(), S = safe(); const fg = bgImage(s, t, d, 0.6) ? "#ffffff" : th.fg; const words = wordsOf(s); const n = Math.max(1, words.length);
+  const times = itemTimes(n, d, s, 0.2); let k = -1; times.forEach((tt, j) => { if (t >= tt) k = j; });
+  const px = Math.min((PORTRAIT ? 130 : 150) * U, (S.b - S.t) / n / 1.15); const lh = px * 1.12;
+  const y0 = (PORTRAIT ? H * 0.42 : H / 2) - (n * lh) / 2;
+  words.forEach((wd, j) => {
+    if (j > k) return; const p = E.back(prog(t, times[j], 0.45)); const isNow = j === k; const isAcc = s.texts.accent && wd.includes(s.texts.accent);
+    const tb = fitText(wd, S.r - S.l, lh, px, 30 * U, 900, 1.1);
+    ctx.save(); ctx.globalAlpha = clamp(p * 1.5, 0, 1) * (isNow || isAcc ? 1 : 0.45); ctx.font = font(tb.px, 900); ctx.fillStyle = isAcc ? th.accent : fg; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(tb.lines[0] || "", S.l + (1 - p) * -60 * U, y0 + j * lh + tb.px * 0.9); ctx.restore();
+    addHit(i, s.items && s.items.length ? "items." + j : "texts.words", S.l, y0 + j * lh, tb.w, lh);
+  });
+};
+const V = {
+  title: { standard: { label: "左寄せ", fn: T.title }, center: { label: "中央・ライン", fn: VX.titleCenter }, big: { label: "特大の文字", fn: VX.titleBig } },
+  headline: { standard: { label: "下に見出し", fn: T.headline }, band: { label: "帯", fn: VX.headlineBand }, panel: { label: "パネル", fn: VX.headlinePanel } },
+  bullets: { standard: { label: "リスト", fn: T.bullets }, cards: { label: "カード", fn: VX.bulletsCards }, focus: { label: "1つずつ大きく", fn: VX.bulletsFocus } },
+  stat: { standard: { label: "リング", fn: T.stat }, bar: { label: "バー", fn: VX.statBar }, plain: { label: "数字だけ大きく", fn: VX.statPlain } },
+  compare: { standard: { label: "2つの枠", fn: T.compare }, versus: { label: "斜めに分割", fn: VX.compareVersus } },
+  steps: { standard: { label: "線でつなぐ", fn: T.steps }, cards: { label: "カード", fn: VX.stepsCards } },
+  quote: { standard: { label: "引用符", fn: T.quote }, center: { label: "中央", fn: VX.quoteCenter } },
+  split: { standard: { label: "左右に分割", fn: T.split }, overlay: { label: "画像いっぱい", fn: VX.splitOverlay } },
+  cta: { standard: { label: "標準", fn: T.cta }, card: { label: "カード", fn: VX.ctaCard } },
+  kinetic: { standard: { label: "1語ずつ", fn: T.kinetic }, stack: { label: "積み上げ", fn: VX.kineticStack } },
+  terminal: { standard: { label: "標準", fn: T.terminal } }, chart: { standard: { label: "標準", fn: T.chart } }, talk: { standard: { label: "標準", fn: T.talk } }
+};
+
+/* ============================================================
    1フレームの描画
 ============================================================ */
+// 見せ方（variant）と文字の入り方（enter）。台本で指定が無ければ、シーンごとに自動で変える
+function sceneVariant(s, i) {
+  const list = Object.keys(V[s.template] || {}); if (list.length <= 1) return list[0] || "standard";
+  if (s.variant && list.includes(s.variant)) return s.variant;
+  const same = SB.scenes.slice(0, i).filter(x => x.template === s.template).length;
+  const off = parseInt(hash((SB.meta.title || "") + s.template), 16) % list.length;
+  return list[(same + off) % list.length];
+}
+const AUTO_ENTERS = { cyber: ["type", "chars", "blur", "rise"], cinematic: ["blur", "rise", "slide"], pop: ["chars", "slide", "rise"], whiteboard: ["type", "rise", "slide"], stylish: ["rise", "slide", "chars", "blur"] };
+function sceneEnter(s, i) {
+  if (s.enter && ENTERS[s.enter]) return s.enter;
+  if (SB.meta.enter && ENTERS[SB.meta.enter]) return SB.meta.enter;
+  const list = AUTO_ENTERS[TH().preset] || AUTO_ENTERS.stylish; const off = parseInt(hash(SB.meta.title || ""), 16) % list.length;
+  return list[(i + off) % list.length];
+}
 function drawScene(sc, t, collectHits) {
-  const s = sc.s; const fn = T[s.template] || T.title;
+  const s = sc.s; const v = sceneVariant(s, sc.i);
+  const fn = (V[s.template] && V[s.template][v] && V[s.template][v].fn) || T[s.template] || T.title;
   const saveHits = hitBoxes; if (!collectHits) hitBoxes = [];
+  const saveEnter = ENTER; ENTER = sceneEnter(s, sc.i); typeCursor = 0;
   ctx.save(); drawBackground(sc.start + t); fn(s, t, sc.dur, sc.i); ctx.restore();
+  ENTER = saveEnter;
   if (!collectHits) hitBoxes = saveHits;
 }
 const TRANS_DUR = 0.5;
@@ -883,6 +1135,12 @@ function renderSide() {
   const sel = h("select"); Object.entries(TEMPLATES).forEach(([k, v]) => { const o = h("option", { value: k }, v); if (k === s.template) o.selected = true; sel.append(o); });
   sel.onchange = () => { snapshot(); s.template = sel.value; rebuild(); };
   side.append(h("label", {}, "型"), sel);
+  const vlist = V[s.template] || {}; if (Object.keys(vlist).length > 1) {
+    const vs2 = h("select"); vs2.append(h("option", { value: "" }, `おまかせ（いまは「${vlist[sceneVariant(s, cur)].label}」）`)); Object.entries(vlist).forEach(([k, x]) => { const o = h("option", { value: k }, x.label); if (k === s.variant) o.selected = true; vs2.append(o); });
+    vs2.onchange = () => { snapshot(); if (vs2.value) s.variant = vs2.value; else delete s.variant; rebuild(); }; side.append(h("label", {}, "見せ方"), vs2);
+  }
+  const es = h("select"); es.append(h("option", { value: "" }, `おまかせ（いまは「${ENTERS[sceneEnter(s, cur)]}」）`)); Object.entries(ENTERS).forEach(([k, l]) => { const o = h("option", { value: k }, l); if (k === s.enter) o.selected = true; es.append(o); });
+  es.onchange = () => { snapshot(); if (es.value) s.enter = es.value; else delete s.enter; rebuild(); }; side.append(h("label", {}, "文字の入り方"), es);
   (TEXT_KEYS[s.template] || []).forEach(k => side.append(...field("文字: " + k, s.texts[k], v => { s.texts[k] = v; }, { multi: ["title", "body", "quote", "sub"].includes(k), rows: 2 })));
   const lk = LIST_OF[s.template]; if (lk) side.append(...field(lk === "lines" ? "行（1行ずつ。コマンドは先頭に「$ 」）" : "項目（1行に1つ）", (s[lk] || []).join("\n"), v => { s[lk] = v.split("\n").filter(x => x.trim() !== ""); }, { multi: true, rows: 4 }));
   if (s.template === "compare") { [0, 1].forEach(k => { s.cols = s.cols || [{ label: "", items: [] }, { label: "", items: [] }]; side.append(...field(`比較 ${k ? "右" : "左"}（1行目=見出し）`, [s.cols[k].label, ...(s.cols[k].items || [])].join("\n"), v => { const a = v.split("\n").filter(x => x.trim()); s.cols[k] = { label: a[0] || "", items: a.slice(1) }; }, { multi: true, rows: 4 })); }); }
@@ -923,6 +1181,8 @@ function renderSide() {
   asp.onchange = () => { snapshot(); SB.meta.aspect = asp.value; rebuild(); }; side.append(h("label", {}, "縦横"), asp);
   const pre = h("select"); ["stylish", "cinematic", "cyber", "pop", "whiteboard"].forEach(k => { const o = h("option", { value: k }, { stylish: "スタイリッシュ", cinematic: "シネマ", cyber: "サイバー", pop: "ポップ", whiteboard: "ホワイトボード" }[k]); if (k === TH().preset) o.selected = true; pre.append(o); });
   pre.onchange = () => { snapshot(); TH().preset = pre.value; rebuild(); }; side.append(h("label", {}, "背景の雰囲気"), pre);
+  const ge = h("select"); ge.append(h("option", { value: "" }, "シーンごとに自動で変える")); Object.entries(ENTERS).forEach(([k, l]) => { const o = h("option", { value: k }, "すべて「" + l + "」"); if (k === SB.meta.enter) o.selected = true; ge.append(o); });
+  ge.onchange = () => { snapshot(); if (ge.value) SB.meta.enter = ge.value; else delete SB.meta.enter; rebuild(); }; side.append(h("label", {}, "文字の入り方（全体）"), ge);
   const colors = h("div", { class: "row" }); [["bg", "背景"], ["fg", "文字"], ["accent", "強調"], ["accent2", "副"]].forEach(([k, l]) => { const c = h("input", { type: "color" }); c.value = TH()[k]; c.onchange = () => { snapshot(); TH()[k] = c.value; rebuild(); }; colors.append(h("label", { style: "display:flex;gap:4px;align-items:center;margin:0" }, l, c)); }); side.append(colors);
   side.append(...field("声の調子（例：明るく少し速めに）", SB.meta.voice.style, v => { SB.meta.voice.style = v; }));
   if (SB.characters.length) {
